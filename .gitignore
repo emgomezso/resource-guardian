@@ -8,8 +8,8 @@ cat > .gitignore << 'EOF'
 *.db-journal
 *.db-shm
 *.db-wal
-src/var/db/*.db
-src/var/db/*.db-*
+var/db/*.db
+var/db/*.db-*
 
 # Configuration files with sensitive data
 config.local.php
