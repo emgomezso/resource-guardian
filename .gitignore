@@ -1,0 +1,113 @@
+cat > .gitignore << 'EOF'
+# ==================================
+# Resource Guardian .gitignore
+# ==================================
+
+# Database files (SQLite)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+src/var/db/*.db
+src/var/db/*.db-*
+
+# Configuration files with sensitive data
+config.local.php
+*.env
+.env.local
+
+# PHP
+vendor/
+composer.lock
+composer.phar
+
+# Dependencies
+node_modules/
+bower_components/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.project
+.settings/
+.buildpath
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.cache
+
+# Build and distribution
+dist/
+build/
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# Backup files
+*.sql.gz
+*.sql.bak
+backups/
+
+# Testing
+coverage/
+.phpunit.result.cache
+tests/_output/
+
+# Security
+.htpasswd
+*.pem
+*.key
+*.crt
+*.p12
+
+# Documentation build
+docs/_build/
+site/
+
+# Package managers
+package-lock.json
+yarn.lock
+
+# Plesk specific (if you want to ignore)
+# var/log/
+# var/cache/
+
+# Custom exclusions for development
+debug.log
+error.log
+access.log
+
+# Exclude uploads directory if it exists
+uploads/
+files/
+
+# Keep empty directories
+!.gitkeep
+EOF
