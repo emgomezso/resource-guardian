@@ -53,8 +53,8 @@ echo ""
 
 # Create database directory
 echo "Creating database directory..."
-mkdir -p src/var/db
-chmod 755 src/var/db
+mkdir -p var/db
+chmod 755 var/db
 
 # Verify database.sql exists
 if [ ! -f "plib/resources/database.sql" ]; then
@@ -66,8 +66,8 @@ fi
 echo "Initializing database..."
 $PHP_BIN -r "
 try {
-    \$db = new SQLite3('src/var/db/metrics.db');
-    \$schema = file_get_contents('src/plib/resources/database.sql');
+    \$db = new SQLite3('var/db/metrics.db');
+    \$schema = file_get_contents('plib/resources/database.sql');
     \$db->exec(\$schema);
     \$db->close();
     echo 'Database initialized successfully\n';
@@ -82,7 +82,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-chmod 644 src/var/db/metrics.db
+chmod 644 var/db/metrics.db
 
 # Configure cron job with detected PHP path
 echo "Configuring cron job..."
@@ -128,7 +128,7 @@ echo "1. Test monitoring:"
 echo "   $PHP_BIN $CURRENT_DIR/plib/scripts/cron-monitor.php"
 echo ""
 echo "2. View data:"
-echo "   sqlite3 $CURRENT_DIR/src/var/db/metrics.db"
+echo "   sqlite3 $CURRENT_DIR/var/db/metrics.db"
 echo "   SELECT * FROM metrics;"
 echo ""
 echo "3. Access dashboard:"
