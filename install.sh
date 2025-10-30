@@ -28,28 +28,6 @@ fi
 echo "Setting up Plesk module structure..."
 mkdir -p "$PLESK_MODULE_DIR"
 
-# If current directory is not the target directory, create symlink
-if [ "$CURRENT_DIR" != "$TARGET_DIR" ]; then
-    # Remove existing symlink or directory if it exists
-    if [ -L "$TARGET_DIR" ] || [ -d "$TARGET_DIR" ]; then
-        echo "Removing existing installation at $TARGET_DIR..."
-        rm -rf "$TARGET_DIR"
-    fi
-    
-    # Create symlink
-    echo "Creating symlink from $TARGET_DIR to $CURRENT_DIR..."
-    ln -s "$CURRENT_DIR" "$TARGET_DIR"
-    
-    if [ $? -eq 0 ]; then
-        echo "Symlink created successfully"
-    else
-        echo "Error: Failed to create symlink"
-        exit 1
-    fi
-else
-    echo "Module is already in the correct location"
-fi
-
 # Detect PHP path
 if command -v php &> /dev/null; then
     PHP_BIN="php"
