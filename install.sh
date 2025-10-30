@@ -57,8 +57,8 @@ mkdir -p src/var/db
 chmod 755 src/var/db
 
 # Verify database.sql exists
-if [ ! -f "src/plib/resources/database.sql" ]; then
-    echo "Error: database.sql not found at src/plib/resources/database.sql"
+if [ ! -f "plib/resources/database.sql" ]; then
+    echo "Error: database.sql not found at plib/resources/database.sql"
     exit 1
 fi
 
@@ -86,7 +86,7 @@ chmod 644 src/var/db/metrics.db
 
 # Configure cron job with detected PHP path
 echo "Configuring cron job..."
-SCRIPT_PATH="$CURRENT_DIR/src/plib/scripts/cron-monitor.php"
+SCRIPT_PATH="$CURRENT_DIR/plib/scripts/cron-monitor.php"
 CRON_CMD="* * * * * $PHP_BIN $SCRIPT_PATH >> /var/log/resource-guardian.log 2>&1"
 
 if crontab -l 2>/dev/null | grep -q "cron-monitor.php"; then
@@ -122,11 +122,10 @@ echo "Installation completed successfully!"
 echo "====================================="
 echo ""
 echo "Module location: $CURRENT_DIR"
-echo "Plesk symlink: $TARGET_DIR"
 echo ""
 echo "Next steps:"
 echo "1. Test monitoring:"
-echo "   $PHP_BIN $CURRENT_DIR/src/plib/scripts/cron-monitor.php"
+echo "   $PHP_BIN $CURRENT_DIR/plib/scripts/cron-monitor.php"
 echo ""
 echo "2. View data:"
 echo "   sqlite3 $CURRENT_DIR/src/var/db/metrics.db"
