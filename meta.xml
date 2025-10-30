@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<module>
+    <id>resource-guardian</id>
+    <name>Resource Guardian</name>
+    <description>Real-time server resource monitoring and alerting system for Plesk</description>
+    <version>1.0.0</version>
+    <release>1</release>
+    <vendor>Team CL9</vendor>
+    <url>https://github.com/emgomezso/resource-guardian.git</url>
+    <plesk_min_version>18.0.0</plesk_min_version>
+    
+    <!-- Categories for Plesk marketplace -->
+    <category>
+        <id>monitoring</id>
+    </category>
+    
+    <!-- Icon (optional) -->
+    <icon>
+        <url>htdocs/images/icon.png</url>
+    </icon>
+    
+    <!-- Screenshot (optional) -->
+    <screenshots>
+        <screenshot>
+            <url>htdocs/images/screenshot.png</url>
+        </screenshot>
+    </screenshots>
+</module>
