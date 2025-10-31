@@ -11,7 +11,7 @@ ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 // Define paths
-define('BASE_DIR', dirname(dirname(dirname(__FILE__))));
+define('BASE_DIR', dirname(dirname(__FILE__)));
 define('DB_PATH', BASE_DIR . '/var/db/metrics.db');
 
 /**
