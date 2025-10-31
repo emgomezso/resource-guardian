@@ -57,8 +57,8 @@ mkdir -p var/db
 chmod 755 var/db
 
 # Verify database.sql exists
-if [ ! -f "plib/resources/database.sql" ]; then
-    echo "Error: database.sql not found at plib/resources/database.sql"
+if [ ! -f "resources/database.sql" ]; then
+    echo "Error: database.sql not found at resources/database.sql"
     exit 1
 fi
 
@@ -67,7 +67,7 @@ echo "Initializing database..."
 $PHP_BIN -r "
 try {
     \$db = new SQLite3('var/db/metrics.db');
-    \$schema = file_get_contents('plib/resources/database.sql');
+    \$schema = file_get_contents('resources/database.sql');
     \$db->exec(\$schema);
     \$db->close();
     echo 'Database initialized successfully\n';
@@ -86,7 +86,7 @@ chmod 644 var/db/metrics.db
 
 # Configure cron job with detected PHP path
 echo "Configuring cron job..."
-SCRIPT_PATH="$CURRENT_DIR/plib/scripts/cron-monitor.php"
+SCRIPT_PATH="$CURRENT_DIR/scripts/cron-monitor.php"
 CRON_CMD="* * * * * $PHP_BIN $SCRIPT_PATH >> /var/log/resource-guardian.log 2>&1"
 
 if crontab -l 2>/dev/null | grep -q "cron-monitor.php"; then
@@ -125,7 +125,7 @@ echo "Module location: $CURRENT_DIR"
 echo ""
 echo "Next steps:"
 echo "1. Test monitoring:"
-echo "   $PHP_BIN $CURRENT_DIR/plib/scripts/cron-monitor.php"
+echo "   $PHP_BIN $CURRENT_DIR/scripts/cron-monitor.php"
 echo ""
 echo "2. View data:"
 echo "   sqlite3 $CURRENT_DIR/var/db/metrics.db"
