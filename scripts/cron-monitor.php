@@ -110,9 +110,11 @@ try {
     $stmt->bindValue(7, $mysqlSlowQueries, SQLITE3_INTEGER);
     
     $result = $stmt->execute();
-    
+
     if (!$result) {
-        throw new Exception("Failed to insert metrics");
+        // CORRECCIÓN: Captura el error de la base de datos y lánzalo
+        $errorMsg = $db->lastErrorMsg();
+        throw new Exception("Failed to insert metrics. SQLite Error: " . $errorMsg);
     }
     
     // Log success
