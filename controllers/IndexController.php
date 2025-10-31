@@ -153,7 +153,7 @@ class IndexController extends pm_Controller_Action
     /**
      * Initialize database if it doesn't exist
      */
-    private function initializeDatabase()
+private function initializeDatabase()
     {
         $dir = dirname($this->dbPath);
         if (!is_dir($dir)) {
@@ -161,7 +161,8 @@ class IndexController extends pm_Controller_Action
         }
         
         $db = new SQLite3($this->dbPath);
-        $schemaPath = pm_Context::getModuleDir() . '/resources/database.sql';
+        
+        $schemaPath = pm_Context::getBaseDir() . '/resources/database.sql'; 
         
         if (file_exists($schemaPath)) {
             $schema = file_get_contents($schemaPath);
