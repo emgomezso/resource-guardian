@@ -31,11 +31,19 @@ class IndexController extends pm_Controller_Action
     {
         try {
             $db = new SQLite3($this->dbPath);
-            
-            // Get current metrics
-            $result = $db->query("SELECT * FROM metrics ORDER BY timestamp DESC LIMIT 1");
-            $this->view->currentMetrics = $result->fetchArray(SQLITE3_ASSOC);
-            
+
+            // --- Bloque 1: Get current metrics ---
+        
+            $sql1 = "SELECT * FROM metrics ORDER BY timestamp DESC LIMIT 1";
+            $result1 = $db->query($sql1);
+        
+            // ¡Corrección 1: Verificar el resultado de la primera consulta!
+            if ($result1 === false) {
+                throw new Exception("SQL Error: Failed to query metrics: " . $db->lastErrorMsg() . " (Query: {$sql1})");
+            }
+        
+            $this->view->currentMetrics = $result1->fetchArray(SQLITE3_ASSOC);
+        
             if (!$this->view->currentMetrics) {
                 // No data yet, set defaults
                 $this->view->currentMetrics = [
@@ -45,16 +53,25 @@ class IndexController extends pm_Controller_Action
                     'timestamp' => time()
                 ];
             }
-            
-            // Get recent alerts (last 10)
-            $result = $db->query("SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 10");
+
+            // --- Bloque 2: Get recent alerts ---
+        
+            $sql2 = "SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 10";
+            $result2 = $db->query($sql2);
+        
+            // ¡Corrección 2: Verificar el resultado de la segunda consulta!
+            if ($result2 === false) {
+                throw new Exception("SQL Error: Failed to query alerts: " . $db->lastErrorMsg() . " (Query: {$sql2})");
+            }
+        
             $this->view->recentAlerts = [];
-            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            // La consulta fue exitosa, ahora el while funciona
+            while ($row = $result2->fetchArray(SQLITE3_ASSOC)) {
                 $this->view->recentAlerts[] = $row;
             }
-            
+        
             $db->close();
-            
+        
         } catch (Exception $e) {
             $this->_helper->json([
                 'status' => 'error',
