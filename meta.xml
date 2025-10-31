@@ -3,22 +3,10 @@
   <id>resource-guardian</id>
   <name>Resource Guardian</name>
   <description>Real-time server resource monitoring and alerting system for Plesk</description>
+  <category>monitoring</category>
   <version>1.0</version>
   <release>1</release>
-  <description>Gestión de recursos.</description>
-  <category>server_admin</category>
+  <vendor>CL9</vendor>
+  <url>https://github.com/emgomezso</url>
   <plesk_min_version>18.0.0</plesk_min_version>
-
-  <navigation>
-    <main-menu>
-      <item id="rg-main-page" title="Resource Guardian" href="index/index">
-        <owner-type>server</owner-type>
-      </item>
-    </main-menu>
-  </navigation>
-
-  <vendor>
-    <name>TEAM CL9</name>
-    <url>https://github.com/emgomezso</url>
-  </vendor>
 </module>
