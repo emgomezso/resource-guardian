@@ -7,6 +7,7 @@
 
 // Set error handling
 error_reporting(E_ALL);
+file_put_contents('/tmp/rg_cron_user.log', 'User: ' . get_current_user() . ', UID: ' . getmyuid() . "\n", FILE_APPEND);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
