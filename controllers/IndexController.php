@@ -179,7 +179,8 @@ private function initializeDatabase()
         
         $db = new SQLite3($this->dbPath);
         
-        $schemaPath = pm_Context::getBaseUrl() . '/resources/database.sql'; 
+        $rootPath = dirname(dirname(__FILE__));
+        $schemaPath = $rootPath . '/resources/database.sql';
         
         if (file_exists($schemaPath)) {
             $schema = file_get_contents($schemaPath);
