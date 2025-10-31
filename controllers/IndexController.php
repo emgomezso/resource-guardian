@@ -174,7 +174,7 @@ class IndexController extends pm_Controller_Action
     /**
      * Helper method for localized messages
      */
-    protected static function lmsg($key, $default = '')
+    public static function lmsg($key, $default = '')
     {
         return $this->view->lmsg($key, $default);
     }
