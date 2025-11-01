@@ -48,11 +48,11 @@ class IndexController extends pm_Controller_Action
             $cronScriptPath = $rootPath . '/scripts/cron-monitor.php';
 
             // --- 2. Ejecutar el script cron ---
-            if (file_exists($cronScriptPath)) {
+            //if (file_exists($cronScriptPath)) {
                 // Usar 'require_once' para ejecutar el script PHP.
                 // Esto ejecutará el script DENTRO de la función indexAction().
-                require_once($cronScriptPath);
-            }
+                //require_once($cronScriptPath);
+            //}
         
             if (!$this->view->currentMetrics) {
                 // No data yet, set defaults
