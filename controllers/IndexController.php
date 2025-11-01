@@ -21,7 +21,7 @@ class IndexController extends pm_Controller_Action
         }
         
         // Set page title
-        $this->view->pageTitle = $this->lmsg('pageTitle', 'Resource Guardian Dashboard');
+        $this->view->pageTitle = $this->lmsg('Resource Guardian Dashboard');
     }
     
     /**
