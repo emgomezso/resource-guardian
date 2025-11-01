@@ -13,7 +13,8 @@ class IndexController extends pm_Controller_Action
         parent::init();
         
         // Set database path
-        $this->dbPath = pm_Context::getVarDir() . '/db/metrics.db';
+        //$this->dbPath = pm_Context::getVarDir() . '/db/metrics.db';
+        $this->dbPath = '/opt/psa/admin/plib/modules/resource-guardian/var/db/metrics.db';
         
         // Initialize database if not exists
         if (!file_exists($this->dbPath)) {
