@@ -12,8 +12,9 @@ ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 // Define paths
-define('BASE_DIR', dirname(dirname(__FILE__)));
-define('DB_PATH', BASE_DIR . '/var/db/metrics.db');
+//define('BASE_DIR', dirname(dirname(__FILE__)));
+//define('DB_PATH', BASE_DIR . '/var/db/metrics.db');
+define('DB_PATH', '/usr/local/psa/var/modules/resource-guardian/db/metrics.db');
 
 /**
  * Log message to file
