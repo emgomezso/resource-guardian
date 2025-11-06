@@ -4,7 +4,7 @@
  * Handles main dashboard display and metrics API
  */
 
-class IndexController extends pm_Controller_Action
+class Modules_ResourceGuardian_IndexController extends pm_Controller_Action
 {
     private $dbPath;
     
