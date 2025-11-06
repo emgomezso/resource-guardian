@@ -16,7 +16,7 @@ if (!is_dir($logDir)) {
 }
 
 try {
-    $scriptPath = pm_Context::getPlibDir() . '/modules/resource-guardian/scripts/cron-monitor.php';
+    $scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
     if (!file_exists($scriptPath)) {
         throw new Exception("Monitor script not found at: {$scriptPath}");
     }
