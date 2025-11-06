@@ -32,6 +32,7 @@ try {
     
     // Connect to database
     $db = new SQLite3(DB_PATH);
+    $db->busyTimeout(1000);
     
     // Collect CPU usage
     $load = sys_getloadavg();
