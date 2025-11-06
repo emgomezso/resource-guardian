@@ -52,7 +52,7 @@ try {
         'arguments' => '',
         'description' => 'Resource Guardian - System Monitoring',
         'notify' => 'none', // no notificar
-        'emailType' => null,
+        'emailType' => '',
         'email' => null,
         'minute' => '*',
         'hour' => '*',
