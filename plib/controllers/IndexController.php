@@ -23,6 +23,7 @@ class IndexController extends pm_Controller_Action
         // Set page title
         $this->view->pageTitle = $this->lmsg('Resource Guardian Dashboard');
 
+        /*
         $rootPath = dirname(dirname(__FILE__));
         $cronScriptPath = $rootPath . '/scripts/cron-monitor.php';
         // --- 2. Ejecutar el script cron ---
@@ -30,6 +31,7 @@ class IndexController extends pm_Controller_Action
              // Usar 'require_once' para ejecutar el script PHP.
              require_once($cronScriptPath);
         }
+        */
     }
     
     /**
@@ -51,18 +53,6 @@ class IndexController extends pm_Controller_Action
             }
         
             $this->view->currentMetrics = $result1->fetchArray(SQLITE3_ASSOC);
-
-            /*
-            $rootPath = dirname(dirname(__FILE__));
-            $cronScriptPath = $rootPath . '/scripts/cron-monitor.php';
-
-            // --- 2. Ejecutar el script cron ---
-            if (file_exists($cronScriptPath)) {
-                // Usar 'require_once' para ejecutar el script PHP.
-                // Esto ejecutará el script DENTRO de la función indexAction().
-                require_once($cronScriptPath);
-            }
-            */
         
             if (!$this->view->currentMetrics) {
                 // No data yet, set defaults
