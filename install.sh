@@ -16,8 +16,8 @@ fi
 CURRENT_DIR="$(pwd)"
 MODULE_NAME="resource-guardian"
 
-# PLESK_MODULE_DIR="/usr/local/psa/admin/plib/modules"
-PLESK_MODULE_DIR="/usr/local/psa/var/modules/"
+PLESK_MODULE_DIR="/usr/local/psa/admin/plib/modules"
+# PLESK_MODULE_DIR="/usr/local/psa/var/modules/"
 
 TARGET_DIR="$PLESK_MODULE_DIR/$MODULE_NAME"
 
