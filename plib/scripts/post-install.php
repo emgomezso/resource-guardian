@@ -19,7 +19,7 @@ if (!is_dir($logDir)) {
 
 // Create cron job as PHP script type
 try {
-    $scriptPath = pm_Context::getPlibDir() . '/scripts/cron-monitor.php';
+    $scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
     
     // Verify script exists
     if (!file_exists($scriptPath)) {
