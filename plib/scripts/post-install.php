@@ -1,7 +1,7 @@
 <?php
 /**
  * Post-installation script for Resource Guardian
- * Sets up cron job as PHP script type
+ * Sets up cron job using correct database schema
  */
 
 // CRÍTICO: Inicializar el contexto de Plesk
@@ -17,9 +17,9 @@ if (!is_dir($logDir)) {
     @chgrp($logDir, 'psaadm');
 }
 
-// Create cron job as PHP script type
+// Create cron job using direct database insertion with correct schema
 try {
-    $scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
+    $scriptPath = pm_Context::getPlibDir() . '/scripts/cron-monitor.php';
     
     // Verify script exists
     if (!file_exists($scriptPath)) {
@@ -39,20 +39,17 @@ try {
     // Get service node ID (usually 1)
     $serviceNodeId = 1;
     
-    // Get default PHP handler
-    $phpHandlerId = 'plesk-php80-fastcgi'; // Adjust if needed
-    
-    // Insert new task with type = 'php'
+    // Insert new task with correct column names
     $db->insert('ScheduledTasks', array(
         'hash' => md5('resource-guardian-monitor-' . time()),
         'serviceNodeId' => $serviceNodeId,
         'sysUserId' => null,
         'sysUserLogin' => 'root',
         'isActive' => 1,
-        'type' => 'php',  // CAMBIO IMPORTANTE: usar 'php' en lugar de 'exec'
-        'phpHandlerId' => $phpHandlerId,
-        'command' => $scriptPath,  // CAMBIO: la ruta completa va en command
-        'arguments' => null,  // CAMBIO: arguments es null para tipo PHP
+        'type' => 'exec',
+        'phpHandlerId' => null,
+        'command' => $scriptPath,
+        'arguments' => null,
         'description' => 'Resource Guardian - System Monitoring',
         'notify' => 'errors',
         'emailType' => 'owner',
@@ -65,9 +62,8 @@ try {
         'period' => 0
     ));
     
-    pm_Log::info('Cron job created successfully as PHP script: ' . $scriptPath);
+    pm_Log::info('Cron job created successfully: ' . $scriptPath);
     echo "✓ Cron job created successfully\n";
-    echo "  Type: PHP Script\n";
     echo "  Script: {$scriptPath}\n";
     echo "  Schedule: Every minute (* * * * *)\n";
     
