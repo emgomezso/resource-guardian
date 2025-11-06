@@ -13,8 +13,8 @@ $logDir = $varDir . '/logs';
 
 if (!is_dir($logDir)) {
     mkdir($logDir, 0755, true);
-    chown($logDir, 'psaadm');
-    chgrp($logDir, 'psaadm');
+    @chown($logDir, 'psaadm');
+    @chgrp($logDir, 'psaadm');
 }
 
 // Create cron job
@@ -26,13 +26,13 @@ try {
         throw new Exception("Monitor script not found at: {$scriptPath}");
     }
     
-    // Remove existing task first
+    // Remove existing task using database query
     try {
-        $existing = pm_Scheduler_Task::getByDescription('Resource Guardian - System Monitoring');
-        $existing->delete();
-        pm_Log::info('Removed existing cron task');
+        $db = pm_Bootstrap::getDbAdapter();
+        $db->delete('ScheduledTasks', "description = 'Resource Guardian - System Monitoring'");
+        pm_Log::info('Removed existing cron task if any');
     } catch (Exception $e) {
-        // No existing task, continue
+        // Continue if no task exists
     }
     
     // Create new task
@@ -57,3 +57,6 @@ try {
     echo "✗ Error: " . $e->getMessage() . "\n";
     exit(1);
 }
+
+echo "\nResource Guardian installed successfully!\n";
+echo "Logs: {$logDir}/monitor.log\n";
