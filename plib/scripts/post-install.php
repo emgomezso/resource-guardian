@@ -49,7 +49,7 @@ try {
         'type' => 'exec',
         'phpHandlerId' => null,
         'command' => '/opt/psa/admin/plib/modules/resource-guardian/scripts/cron-monitor.php',
-        'arguments' => null,
+        'arguments' => '',
         'description' => 'Resource Guardian - System Monitoring',
         'notify' => 'errors',
         'emailType' => 'owner',
