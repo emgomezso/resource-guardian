@@ -20,22 +20,26 @@ Real-time server resource monitoring and alerting system for Plesk environments.
 
 ## Installation
 
-1. Clone the repository:
+1. Access SSH Terminal
+
+2. Clone the repository:
 ```bash
 git clone https://github.com/emgomezso/resource-guardian.git
-cd resource-guardian
+```
+3. Compress the cloned folder into a .zip file
+```bash
+zip -r resource-guardian.zip resource-guardian/ -x "*.git*"
 ```
 
-2. Run installation script:
+4. Run installation script:
 ```bash
-chmod +x install.sh
-./install.sh
+plesk bin extension --install /root/resource-guardian.zip
 ```
 
 3. Access via Plesk:
    - Navigate to Extensions
    - Find "Resource Guardian"
-   - Configure thresholds and email alerts
+   - Press the open button
 
 ## Configuration
 
