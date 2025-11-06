@@ -28,14 +28,7 @@ try {
     
     // Get database adapter
     $db = pm_Bootstrap::getDbAdapter();
-    
-    // Remove existing task if any
-    try {
-        $db->delete('ScheduledTasks', "description = 'Resource Guardian - System Monitoring'");
-    } catch (Exception $e) {
-        // Continue if no task exists
-    }
-    
+       
     // Get service node ID (usually 1)
     $serviceNodeId = 1;
     
@@ -58,11 +51,7 @@ try {
         'dayOfWeek' => '*',
         'period' => 0
     ));
-    
-    pm_Log::info('Cron job created successfully: ' . $scriptPath);
-    echo "✓ Cron job created successfully\n";
-    echo "  Script: {$scriptPath}\n";
-    echo "  Schedule: Every minute (* * * * *)\n";
+
     
 } catch (Exception $e) {
     $errorMsg = 'Resource Guardian Cron Error: ' . $e->getMessage();
@@ -71,6 +60,3 @@ try {
     echo "✗ Error: " . $e->getMessage() . "\n";
     exit(1);
 }
-
-echo "\nResource Guardian installed successfully!\n";
-echo "Logs: {$logDir}/monitor.log\n";
