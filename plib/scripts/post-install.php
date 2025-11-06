@@ -23,29 +23,34 @@ try {
 
     $db = pm_Bootstrap::getDbAdapter();
 
-    // Eliminar tarea previa
+    // Eliminar tarea previa si existe
     try {
         $db->delete('ScheduledTasks', "description = 'Resource Guardian - System Monitoring'");
     } catch (Exception $e) {
         // Ignorar si no existe
     }
 
-    // Obtener el ID del handler PHP 8.3 (ajusta según tu versión)
-    $phpHandler = $db->fetchOne("SELECT id FROM PhpHandlers WHERE version LIKE '8.3%' LIMIT 1");
+    // Obtener el handler PHP activo desde la API de Plesk
+    $phpHandler = null;
+    try {
+        $phpHandler = pm_Php::getInstance()->getHandlerId();
+    } catch (Exception $e) {
+        pm_Log::warn("Cannot determine PHP handler ID, defaulting to null");
+    }
 
-    // Insertar la nueva tarea programada
+    // Insertar nueva tarea programada
     $db->insert('ScheduledTasks', array(
         'hash' => md5('resource-guardian-php-' . time()),
         'serviceNodeId' => 1,
         'sysUserId' => null,
         'sysUserLogin' => 'root',
         'isActive' => 1,
-        'type' => 'php', // <--- Ejecutar script PHP
+        'type' => 'php',
         'phpHandlerId' => $phpHandler,
         'command' => $scriptPath,
         'arguments' => '',
         'description' => 'Resource Guardian - System Monitoring',
-        'notify' => 'none', // No notificar
+        'notify' => 'none', // no notificar
         'emailType' => 'owner',
         'email' => null,
         'minute' => '*',
