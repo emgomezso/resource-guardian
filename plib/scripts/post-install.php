@@ -1,7 +1,7 @@
 <?php
 /**
  * Post-installation script for Resource Guardian
- * Sets up cron job
+ * Sets up cron job using direct database insertion
  */
 
 // CRÍTICO: Inicializar el contexto de Plesk
@@ -17,7 +17,7 @@ if (!is_dir($logDir)) {
     @chgrp($logDir, 'psaadm');
 }
 
-// Create cron job
+// Create cron job using direct database insertion
 try {
     $scriptPath = pm_Context::getPlibDir() . '/scripts/cron-monitor.php';
     
@@ -26,24 +26,25 @@ try {
         throw new Exception("Monitor script not found at: {$scriptPath}");
     }
     
-    // Remove existing task using database query
+    // Get database adapter
+    $db = pm_Bootstrap::getDbAdapter();
+    
+    // Remove existing task if any
     try {
-        $db = pm_Bootstrap::getDbAdapter();
         $db->delete('ScheduledTasks', "description = 'Resource Guardian - System Monitoring'");
-        pm_Log::info('Removed existing cron task if any');
     } catch (Exception $e) {
         // Continue if no task exists
     }
     
-    // Create new task
-    $task = new pm_Scheduler_Task();
-    $task->setCmd('/usr/bin/php')
-         ->setArgs(array($scriptPath))
-         ->setDescription('Resource Guardian - System Monitoring')
-         ->setOwner('root')
-         ->setSchedule('* * * * *');  // Every minute
-    
-    $task->save();
+    // Insert new task directly into database
+    $db->insert('ScheduledTasks', array(
+        'description' => 'Resource Guardian - System Monitoring',
+        'cmd' => '/usr/bin/php',
+        'args' => $scriptPath,
+        'owner' => 'root',
+        'active' => 'true',
+        'schedule' => '* * * * *'
+    ));
     
     pm_Log::info('Cron job created successfully: ' . $scriptPath);
     echo "✓ Cron job created successfully\n";
