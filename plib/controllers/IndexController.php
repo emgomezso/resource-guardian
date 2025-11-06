@@ -44,6 +44,7 @@ class IndexController extends pm_Controller_Action
         
             $this->view->currentMetrics = $result1->fetchArray(SQLITE3_ASSOC);
 
+            /*
             $rootPath = dirname(dirname(__FILE__));
             $cronScriptPath = $rootPath . '/scripts/cron-monitor.php';
 
@@ -53,6 +54,7 @@ class IndexController extends pm_Controller_Action
                 // Esto ejecutará el script DENTRO de la función indexAction().
                 require_once($cronScriptPath);
             }
+            */
         
             if (!$this->view->currentMetrics) {
                 // No data yet, set defaults
