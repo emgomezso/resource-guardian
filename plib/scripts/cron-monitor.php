@@ -5,16 +5,22 @@
  * Collects system metrics every minute
  */
 
-// Set error handling
+// Bootstrap Plesk API (IMPORTANTE)
+require_once '/opt/psa/admin/plib/init.php';
+pm_Context::init('resource-guardian');
+
+// Set error handling - USA LA RUTA CORRECTA
 error_reporting(E_ALL);
-file_put_contents('/tmp/rg_cron_user.log', 'User: ' . get_current_user() . ', UID: ' . getmyuid() . "\n", FILE_APPEND);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-// Define paths
-//define('BASE_DIR', dirname(dirname(__FILE__)));
-define('BASE_DIR', '/opt/psa/var/modules/resource-guardian');
-define('DB_PATH', BASE_DIR . '/db/metrics.db');
+// Define paths usando pm_Context
+define('VAR_DIR', pm_Context::getVarDir());
+define('DB_PATH', VAR_DIR . '/db/metrics.db');
+define('LOG_PATH', VAR_DIR . '/logs/monitor.log');
+
+// Set log file
+ini_set('error_log', LOG_PATH);
 
 /**
  * Log message to file
@@ -30,9 +36,12 @@ try {
         throw new Exception("Database not found at: " . DB_PATH);
     }
     
-    // Connect to database
+    // Connect to database with better timeout
     $db = new SQLite3(DB_PATH);
-    $db->busyTimeout(1000);
+    $db->busyTimeout(5000);
+    
+    // Enable WAL mode for better concurrency
+    $db->exec('PRAGMA journal_mode=WAL');
     
     // Collect CPU usage
     $load = sys_getloadavg();
@@ -61,7 +70,6 @@ try {
         if (preg_match('/MemAvailable:\s+(\d+)/', $meminfo, $matchesFree)) {
             $ramFree = (int)$matchesFree[1];
         } elseif (preg_match('/MemFree:\s+(\d+)/', $meminfo, $matchesFree)) {
-            // Fallback to MemFree if MemAvailable not available
             $ramFree = (int)$matchesFree[1];
         }
         
@@ -70,12 +78,18 @@ try {
         }
     }
     
-    // Collect MySQL connections (optional, may fail if no MySQL access)
+    // Collect MySQL connections (optional)
     $mysqlConnections = 0;
     $mysqlSlowQueries = 0;
     
     try {
-        $mysqli = @new mysqli('localhost', 'root', '', 'information_schema');
+        // Try to get MySQL password from Plesk
+        $mysqlPassword = '';
+        if (file_exists('/etc/psa/.psa.shadow')) {
+            $mysqlPassword = trim(file_get_contents('/etc/psa/.psa.shadow'));
+        }
+        
+        $mysqli = @new mysqli('localhost', 'admin', $mysqlPassword);
         if (!$mysqli->connect_error) {
             $result = $mysqli->query("SHOW STATUS LIKE 'Threads_connected'");
             if ($result) {
@@ -92,32 +106,30 @@ try {
             $mysqli->close();
         }
     } catch (Exception $e) {
-        // MySQL monitoring is optional, don't fail if not available
         logMessage("MySQL monitoring failed: " . $e->getMessage());
     }
     
     // Insert metrics into database
     $timestamp = time();
+    
     $stmt = $db->prepare("
         INSERT INTO metrics 
         (timestamp, cpu_usage, ram_usage, ram_total, ram_free, io_read, io_write, mysql_connections, mysql_slow_queries) 
-        VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?)
+        VALUES (:timestamp, :cpu, :ram, :ram_total, :ram_free, 0, 0, :mysql_conn, :mysql_slow)
     ");
     
-    $stmt->bindValue(1, $timestamp, SQLITE3_INTEGER);
-    $stmt->bindValue(2, $cpuUsage, SQLITE3_FLOAT);
-    $stmt->bindValue(3, $ramUsage, SQLITE3_FLOAT);
-    $stmt->bindValue(4, $ramTotal, SQLITE3_INTEGER);
-    $stmt->bindValue(5, $ramFree, SQLITE3_INTEGER);
-    $stmt->bindValue(6, $mysqlConnections, SQLITE3_INTEGER);
-    $stmt->bindValue(7, $mysqlSlowQueries, SQLITE3_INTEGER);
+    $stmt->bindValue(':timestamp', $timestamp, SQLITE3_INTEGER);
+    $stmt->bindValue(':cpu', $cpuUsage, SQLITE3_FLOAT);
+    $stmt->bindValue(':ram', $ramUsage, SQLITE3_FLOAT);
+    $stmt->bindValue(':ram_total', $ramTotal, SQLITE3_INTEGER);
+    $stmt->bindValue(':ram_free', $ramFree, SQLITE3_INTEGER);
+    $stmt->bindValue(':mysql_conn', $mysqlConnections, SQLITE3_INTEGER);
+    $stmt->bindValue(':mysql_slow', $mysqlSlowQueries, SQLITE3_INTEGER);
     
     $result = $stmt->execute();
 
     if (!$result) {
-        // CORRECCIÓN: Captura el error de la base de datos y lánzalo
-        $errorMsg = $db->lastErrorMsg();
-        throw new Exception("Failed to insert metrics. SQLite Error: " . $errorMsg);
+        throw new Exception("Failed to insert metrics. SQLite Error: " . $db->lastErrorMsg());
     }
     
     // Log success
@@ -128,13 +140,14 @@ try {
         $mysqlConnections
     );
     logMessage($message);
-    echo "$message\n";
     
     // Check thresholds and generate alerts
     $config = [];
     $configResult = $db->query("SELECT key, value FROM config");
-    while ($row = $configResult->fetchArray(SQLITE3_ASSOC)) {
-        $config[$row['key']] = $row['value'];
+    if ($configResult) {
+        while ($row = $configResult->fetchArray(SQLITE3_ASSOC)) {
+            $config[$row['key']] = $row['value'];
+        }
     }
     
     // Check CPU thresholds
@@ -148,8 +161,8 @@ try {
     }
     
     // Check RAM thresholds
-    $ramCritical = isset($config['ram_critical_threshold']) ? (float)$config['ram_critical_threshold'] : 70;
-    $ramWarning = isset($config['ram_warning_threshold']) ? (float)$config['ram_warning_threshold'] : 50;
+    $ramCritical = isset($config['ram_critical_threshold']) ? (float)$config['ram_critical_threshold'] : 90;
+    $ramWarning = isset($config['ram_warning_threshold']) ? (float)$config['ram_warning_threshold'] : 75;
     
     if ($ramUsage >= $ramCritical) {
         createAlert($db, 'ram', 'critical', $ramUsage, $ramCritical);
@@ -168,7 +181,7 @@ try {
 } catch (Exception $e) {
     $errorMsg = "Resource Guardian Error: " . $e->getMessage();
     logMessage($errorMsg);
-    echo "$errorMsg\n";
+    error_log($errorMsg);
     exit(1);
 }
 
@@ -181,19 +194,18 @@ function createAlert($db, $type, $severity, $value, $threshold) {
     $check = $db->prepare("
         SELECT COUNT(*) as count 
         FROM alerts 
-        WHERE alert_type = ? 
-        AND severity = ? 
-        AND timestamp > ?
+        WHERE alert_type = :type 
+        AND severity = :severity 
+        AND timestamp > :time
     ");
-    $check->bindValue(1, $type, SQLITE3_TEXT);
-    $check->bindValue(2, $severity, SQLITE3_TEXT);
-    $check->bindValue(3, $recentTime, SQLITE3_INTEGER);
+    $check->bindValue(':type', $type, SQLITE3_TEXT);
+    $check->bindValue(':severity', $severity, SQLITE3_TEXT);
+    $check->bindValue(':time', $recentTime, SQLITE3_INTEGER);
     
     $result = $check->execute();
     $row = $result->fetchArray(SQLITE3_ASSOC);
     
     if ($row['count'] > 0) {
-        // Alert already exists, skip
         return;
     }
     
@@ -203,15 +215,15 @@ function createAlert($db, $type, $severity, $value, $threshold) {
     $stmt = $db->prepare("
         INSERT INTO alerts 
         (timestamp, alert_type, severity, message, metric_value, threshold_value) 
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (:timestamp, :type, :severity, :message, :value, :threshold)
     ");
     
-    $stmt->bindValue(1, time(), SQLITE3_INTEGER);
-    $stmt->bindValue(2, $type, SQLITE3_TEXT);
-    $stmt->bindValue(3, $severity, SQLITE3_TEXT);
-    $stmt->bindValue(4, $message, SQLITE3_TEXT);
-    $stmt->bindValue(5, $value, SQLITE3_FLOAT);
-    $stmt->bindValue(6, $threshold, SQLITE3_FLOAT);
+    $stmt->bindValue(':timestamp', time(), SQLITE3_INTEGER);
+    $stmt->bindValue(':type', $type, SQLITE3_TEXT);
+    $stmt->bindValue(':severity', $severity, SQLITE3_TEXT);
+    $stmt->bindValue(':message', $message, SQLITE3_TEXT);
+    $stmt->bindValue(':value', $value, SQLITE3_FLOAT);
+    $stmt->bindValue(':threshold', $threshold, SQLITE3_FLOAT);
     
     $stmt->execute();
     
