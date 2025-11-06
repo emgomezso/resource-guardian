@@ -15,7 +15,10 @@ fi
 # Get current directory (where the module is located)
 CURRENT_DIR="$(pwd)"
 MODULE_NAME="resource-guardian"
-PLESK_MODULE_DIR="/usr/local/psa/admin/plib/modules"
+
+# PLESK_MODULE_DIR="/usr/local/psa/admin/plib/modules"
+PLESK_MODULE_DIR="/usr/local/psa/var/modules/"
+
 TARGET_DIR="$PLESK_MODULE_DIR/$MODULE_NAME"
 
 # Verify we're in the correct directory
