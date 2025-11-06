@@ -4,10 +4,8 @@
  * Sets up cron job using correct database schema
  */
 
-// CRÍTICO: Inicializar el contexto de Plesk
 pm_Context::init('resource-guardian');
 
-// Create directories if needed
 $varDir = pm_Context::getVarDir();
 $logDir = $varDir . '/logs';
 
@@ -17,41 +15,37 @@ if (!is_dir($logDir)) {
     @chgrp($logDir, 'psaadm');
 }
 
-// Create cron job using direct database insertion with correct schema
 try {
-    $scriptPath = pm_Context::getPlibDir() . '/scripts/cron-monitor.php';
-    
-    // Verify script exists
+    $scriptPath = pm_Context::getPlibDir() . '/modules/resource-guardian/scripts/cron-monitor.php';
     if (!file_exists($scriptPath)) {
         throw new Exception("Monitor script not found at: {$scriptPath}");
     }
-    
-    // Get database adapter
+
     $db = pm_Bootstrap::getDbAdapter();
-    
-    // Remove existing task if any
+
+    // Eliminar tarea previa
     try {
         $db->delete('ScheduledTasks', "description = 'Resource Guardian - System Monitoring'");
     } catch (Exception $e) {
-        // Continue if no task exists
+        // Ignorar si no existe
     }
-    
-    // Get service node ID (usually 1)
-    $serviceNodeId = 1;
-    
-    // Insert new task with correct column names
+
+    // Obtener el ID del handler PHP 8.3 (ajusta según tu versión)
+    $phpHandler = $db->fetchOne("SELECT id FROM PhpHandlers WHERE version LIKE '8.3%' LIMIT 1");
+
+    // Insertar la nueva tarea programada
     $db->insert('ScheduledTasks', array(
-        'hash' => md5('resource-guardian-monitor-' . time()),
-        'serviceNodeId' => $serviceNodeId,
+        'hash' => md5('resource-guardian-php-' . time()),
+        'serviceNodeId' => 1,
         'sysUserId' => null,
         'sysUserLogin' => 'root',
         'isActive' => 1,
-        'type' => 'exec',
-        'phpHandlerId' => null,
-        'command' => '/opt/psa/admin/plib/modules/resource-guardian/scripts/cron-monitor.php',
+        'type' => 'php', // <--- Ejecutar script PHP
+        'phpHandlerId' => $phpHandler,
+        'command' => $scriptPath,
         'arguments' => '',
         'description' => 'Resource Guardian - System Monitoring',
-        'notify' => 'errors',
+        'notify' => 'none', // No notificar
         'emailType' => 'owner',
         'email' => null,
         'minute' => '*',
@@ -61,12 +55,12 @@ try {
         'dayOfWeek' => '*',
         'period' => 0
     ));
-    
-    pm_Log::info('Cron job created successfully: ' . $scriptPath);
-    echo "✓ Cron job created successfully\n";
+
+    pm_Log::info('PHP cron job created successfully: ' . $scriptPath);
+    echo "✓ PHP cron job created successfully\n";
     echo "  Script: {$scriptPath}\n";
     echo "  Schedule: Every minute (* * * * *)\n";
-    
+
 } catch (Exception $e) {
     $errorMsg = 'Resource Guardian Cron Error: ' . $e->getMessage();
     pm_Log::err($errorMsg);
