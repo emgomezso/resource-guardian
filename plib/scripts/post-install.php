@@ -51,9 +51,6 @@ try {
         'command' => $scriptPath,
         'arguments' => '',
         'description' => 'Resource Guardian - System Monitoring',
-        'notify' => 'none', // no notificar
-        'emailType' => '',
-        'email' => null,
         'minute' => '*',
         'hour' => '*',
         'dayOfMonth' => '*',
