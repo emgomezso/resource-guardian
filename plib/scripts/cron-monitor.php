@@ -148,8 +148,8 @@ try {
     }
     
     // Check RAM thresholds
-    $ramCritical = isset($config['ram_critical_threshold']) ? (float)$config['ram_critical_threshold'] : 90;
-    $ramWarning = isset($config['ram_warning_threshold']) ? (float)$config['ram_warning_threshold'] : 75;
+    $ramCritical = isset($config['ram_critical_threshold']) ? (float)$config['ram_critical_threshold'] : 70;
+    $ramWarning = isset($config['ram_warning_threshold']) ? (float)$config['ram_warning_threshold'] : 50;
     
     if ($ramUsage >= $ramCritical) {
         createAlert($db, 'ram', 'critical', $ramUsage, $ramCritical);
