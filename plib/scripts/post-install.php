@@ -48,7 +48,7 @@ try {
         'isActive' => 1,
         'type' => 'exec',
         'phpHandlerId' => null,
-        'command' => '/usr/bin/php',
+        'command' => '/opt/psa/admin/plib/modules/resource-guardian/scripts/cron-monitor.php',
         'arguments' => $scriptPath,
         'description' => 'Resource Guardian - System Monitoring',
         'notify' => 'errors',
