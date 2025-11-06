@@ -4,8 +4,10 @@
  * Sets up cron job using correct database schema
  */
 
+// CRÍTICO: Inicializar el contexto de Plesk
 pm_Context::init('resource-guardian');
 
+// Create directories if needed
 $varDir = pm_Context::getVarDir();
 $logDir = $varDir . '/logs';
 
@@ -15,30 +17,29 @@ if (!is_dir($logDir)) {
     @chgrp($logDir, 'psaadm');
 }
 
+// Create cron job using direct database insertion with correct schema
 try {
     $scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
+    
+    // Verify script exists
     if (!file_exists($scriptPath)) {
         throw new Exception("Monitor script not found at: {$scriptPath}");
     }
-
+    
+    // Get database adapter
     $db = pm_Bootstrap::getDbAdapter();
-
-    // Eliminar tarea previa si existe
+    
+    // Remove existing task if any
     try {
         $db->delete('ScheduledTasks', "description = 'Resource Guardian - System Monitoring'");
     } catch (Exception $e) {
-        // Ignorar si no existe
+        // Continue if no task exists
     }
-
-    // Obtener el handler PHP activo desde la API de Plesk
-    $phpHandler = null;
-    try {
-        $phpHandler = pm_Php::getInstance()->getHandlerId();
-    } catch (Exception $e) {
-        pm_Log::warn("Cannot determine PHP handler ID, defaulting to null");
-    }
-
-    // Insertar nueva tarea programada
+    
+    // Get service node ID (usually 1)
+    $serviceNodeId = 1;
+    
+    // Insert new task with correct column names
     $db->insert('ScheduledTasks', array(
         'hash' => md5('resource-guardian-php-' . time()),
         'serviceNodeId' => 1,
@@ -60,12 +61,12 @@ try {
         'dayOfWeek' => '*',
         'period' => 0
     ));
-
-    pm_Log::info('PHP cron job created successfully: ' . $scriptPath);
-    echo "✓ PHP cron job created successfully\n";
+    
+    pm_Log::info('Cron job created successfully: ' . $scriptPath);
+    echo "✓ Cron job created successfully\n";
     echo "  Script: {$scriptPath}\n";
     echo "  Schedule: Every minute (* * * * *)\n";
-
+    
 } catch (Exception $e) {
     $errorMsg = 'Resource Guardian Cron Error: ' . $e->getMessage();
     pm_Log::err($errorMsg);
