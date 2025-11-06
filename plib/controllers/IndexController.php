@@ -22,6 +22,14 @@ class IndexController extends pm_Controller_Action
         
         // Set page title
         $this->view->pageTitle = $this->lmsg('Resource Guardian Dashboard');
+
+        $rootPath = dirname(dirname(__FILE__));
+        $cronScriptPath = $rootPath . '/scripts/cron-monitor.php';
+        // --- 2. Ejecutar el script cron ---
+        if (file_exists($cronScriptPath)) {
+             // Usar 'require_once' para ejecutar el script PHP.
+             require_once($cronScriptPath);
+        }
     }
     
     /**
