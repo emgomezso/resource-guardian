@@ -18,45 +18,35 @@ if (!is_dir($logDir)) {
 }
 
 // Create cron job using direct database insertion with correct schema
-try {
-    $scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
+$scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
     
     // Verify script exists
-    if (!file_exists($scriptPath)) {
-        throw new Exception("Monitor script not found at: {$scriptPath}");
-    }
+if (!file_exists($scriptPath)) {
+    throw new Exception("Monitor script not found at: {$scriptPath}");
+}
     
     // Get database adapter
-    $db = pm_Bootstrap::getDbAdapter();
+$db = pm_Bootstrap::getDbAdapter();
        
     // Get service node ID (usually 1)
-    $serviceNodeId = 1;
+$serviceNodeId = 1;
     
     // Insert new task with correct column names
-    $db->insert('ScheduledTasks', array(
-        'hash' => md5('resource-guardian-php-' . time()),
-        'serviceNodeId' => 1,
-        'sysUserId' => null,
-        'sysUserLogin' => 'root',
-        'isActive' => 1,
-        'type' => 'php',
-        'phpHandlerId' => $phpHandler,
-        'command' => $scriptPath,
-        'arguments' => '',
-        'description' => 'Resource Guardian - System Monitoring',
-        'minute' => '*',
-        'hour' => '*',
-        'dayOfMonth' => '*',
-        'month' => '*',
-        'dayOfWeek' => '*',
-        'period' => 0
-    ));
-
-    
-} catch (Exception $e) {
-    $errorMsg = 'Resource Guardian Cron Error: ' . $e->getMessage();
-    pm_Log::err($errorMsg);
-    error_log($errorMsg);
-    echo "✗ Error: " . $e->getMessage() . "\n";
-    exit(1);
-}
+$db->insert('ScheduledTasks', array(
+    'hash' => md5('resource-guardian-php-' . time()),
+    'serviceNodeId' => 1,
+    'sysUserId' => null,
+    'sysUserLogin' => 'root',
+    'isActive' => 1,
+    'type' => 'php',
+    'phpHandlerId' => $phpHandler,
+    'command' => $scriptPath,
+    'arguments' => '',
+    'description' => 'Resource Guardian - System Monitoring',
+    'minute' => '*',
+    'hour' => '*',
+    'dayOfMonth' => '*',
+    'month' => '*',
+    'dayOfWeek' => '*',
+    'period' => 0
+));
