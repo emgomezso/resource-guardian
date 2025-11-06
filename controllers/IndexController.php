@@ -14,6 +14,10 @@ class IndexController extends pm_Controller_Action
         
         // Set database path
         $this->dbPath = pm_Context::getVarDir() . '/db/metrics.db';
+
+        echo "<pre>"; // Opcional, pero recomendado
+        var_dump($dbPath);
+        echo "</pre>";
         
         // Initialize database if not exists
         if (!file_exists($this->dbPath)) {
@@ -44,8 +48,8 @@ class IndexController extends pm_Controller_Action
         
             $this->view->currentMetrics = $result1->fetchArray(SQLITE3_ASSOC);
 
-            $rootPath = dirname(dirname(__FILE__));
-            $cronScriptPath = $rootPath . '/scripts/cron-monitor.php';
+            //$rootPath = dirname(dirname(__FILE__));
+            //$cronScriptPath = $rootPath . '/scripts/cron-monitor.php';
 
             // --- 2. Ejecutar el script cron ---
             if (file_exists($cronScriptPath)) {
