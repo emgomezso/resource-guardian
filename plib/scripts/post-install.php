@@ -1,7 +1,8 @@
+
 <?php
 /**
  * Post-installation script for Resource Guardian
- * Sets up cron job using Plesk task-manager
+ * Sets up cron job using correct Plesk database schema
  */
 
 // CRÍTICO: Inicializar el contexto de Plesk
@@ -17,7 +18,7 @@ if (!is_dir($logDir)) {
     @chgrp($logDir, 'psaadm');
 }
 
-// Create cron job using system crontab
+// Create cron job using Plesk database
 try {
     $scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
     
@@ -26,56 +27,70 @@ try {
         throw new Exception("Monitor script not found at: {$scriptPath}");
     }
     
-    $cronLine = "* * * * * /opt/plesk/php/8.3/bin/php " . escapeshellarg($scriptPath) . " >> " . escapeshellarg($logDir . '/cron.log') . " 2>&1";
-    $cronIdentifier = "# Resource Guardian Monitor";
+    // Get database adapter
+    $db = pm_Bootstrap::getDbAdapter();
     
-    // Get current crontab
-    $currentCrontab = shell_exec('crontab -l 2>/dev/null');
-    
-    // Remove existing Resource Guardian cron if present
-    if ($currentCrontab) {
-        $lines = explode("\n", $currentCrontab);
-        $newLines = [];
-        $skipNext = false;
+    // Remove existing task if any
+    try {
+        $existingTasks = $db->fetchAll(
+            "SELECT id FROM ScheduledTasks WHERE description LIKE '%Resource Guardian%'"
+        );
         
-        foreach ($lines as $line) {
-            if (strpos($line, $cronIdentifier) !== false) {
-                $skipNext = true;
-                continue;
-            }
-            if ($skipNext && strpos($line, 'cron-monitor.php') !== false) {
-                $skipNext = false;
-                continue;
-            }
-            $skipNext = false;
-            if (!empty(trim($line))) {
-                $newLines[] = $line;
-            }
+        foreach ($existingTasks as $task) {
+            $db->delete('ScheduledTasks', "id = " . $task['id']);
+            pm_Log::debug('Removed existing task ID: ' . $task['id']);
         }
-        $currentCrontab = implode("\n", $newLines);
+    } catch (Exception $e) {
+        pm_Log::debug('No existing tasks to remove: ' . $e->getMessage());
     }
     
-    // Add new cron job
-    $newCrontab = trim($currentCrontab) . "\n" . $cronIdentifier . "\n" . $cronLine . "\n";
+    // Get service node ID (usually 1)
+    $serviceNodeId = 1;
     
-    // Write to temporary file
-    $tmpFile = tempnam(sys_get_temp_dir(), 'cron');
-    file_put_contents($tmpFile, $newCrontab);
+    // Prepare the command
+    $command = '/opt/plesk/php/8.3/bin/php ' . $scriptPath;
     
-    // Install new crontab
-    $output = shell_exec("crontab " . escapeshellarg($tmpFile) . " 2>&1");
-    unlink($tmpFile);
+    // Insert new task with ALL required fields
+    $taskData = array(
+        'hash' => md5('resource-guardian-monitor-' . time()),
+        'serviceNodeId' => $serviceNodeId,
+        'sysUserId' => null,
+        'sysUserLogin' => 'root',
+        'isActive' => 1,
+        'type' => 'exec',
+        'phpHandlerId' => null,
+        'command' => $command,
+        'arguments' => '',
+        'description' => 'Resource Guardian - System Monitoring',
+        'notify' => 'ignore',
+        'emailType' => 'owner',
+        'email' => null,
+        'minute' => '*',
+        'hour' => '*',
+        'dayOfMonth' => '*',
+        'month' => '*',
+        'dayOfWeek' => '*',
+        'period' => 0
+    );
     
-    // Verify installation
-    $verifyOutput = shell_exec('crontab -l 2>&1 | grep "cron-monitor.php"');
+    $db->insert('ScheduledTasks', $taskData);
+    $taskId = $db->lastInsertId();
     
-    if (empty($verifyOutput)) {
-        throw new Exception("Cron job was not installed. Output: " . $output);
+    // Verify the task was created
+    $verifyTask = $db->fetchRow(
+        "SELECT id, description, command FROM ScheduledTasks WHERE id = ?",
+        array($taskId)
+    );
+    
+    if (!$verifyTask) {
+        throw new Exception("Task was created but cannot be verified");
     }
     
-    pm_Log::info('Cron job created successfully in system crontab');
+    pm_Log::info('Cron job created successfully with ID: ' . $taskId);
     echo "✓ Cron job created successfully\n";
-    echo "  Script: {$scriptPath}\n";
+    echo "  Task ID: {$taskId}\n";
+    echo "  Description: {$verifyTask['description']}\n";
+    echo "  Command: {$verifyTask['command']}\n";
     echo "  Schedule: Every minute (* * * * *)\n";
     echo "  Log file: {$logDir}/cron.log\n";
     
