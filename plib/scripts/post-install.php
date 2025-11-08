@@ -41,10 +41,6 @@ try {
     
     // Insert new task with correct column names
     $db->insert('ScheduledTasks', array(
-        'hash' => md5('resource-guardian-monitor-' . time()),
-        'serviceNodeId' => $serviceNodeId,
-        'sysUserId' => null,
-        'sysUserLogin' => 'root',
         'isActive' => 1,
         'type' => 'exec',
         'phpHandlerId' => null,
