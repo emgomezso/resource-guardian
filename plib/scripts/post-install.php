@@ -14,15 +14,19 @@ $dbDir = $varDir . '/db';
 
 if (!is_dir($logDir)) {
     mkdir($logDir, 0755, true);
-    @chown($logDir, 'psaadm');
-    @chgrp($logDir, 'psaadm');
 }
+// Always ensure correct permissions
+chmod($logDir, 0755);
+chown($logDir, 'psaadm');
+chgrp($logDir, 'psaadm');
 
 if (!is_dir($dbDir)) {
     mkdir($dbDir, 0755, true);
-    @chown($dbDir, 'psaadm');
-    @chgrp($dbDir, 'psaadm');
 }
+// Always ensure correct permissions
+chmod($dbDir, 0755);
+chown($dbDir, 'psaadm');
+chgrp($dbDir, 'psaadm');
 
 // Initialize database
 try {
@@ -59,8 +63,16 @@ try {
     
     // Set proper permissions
     chmod($dbPath, 0644);
-    @chown($dbPath, 'psaadm');
-    @chgrp($dbPath, 'psaadm');
+    chown($dbPath, 'psaadm');
+    chgrp($dbPath, 'psaadm');
+    
+    // Also fix any existing log files
+    $logFile = $logDir . '/cron.log';
+    if (file_exists($logFile)) {
+        chmod($logFile, 0644);
+        chown($logFile, 'psaadm');
+        chgrp($logFile, 'psaadm');
+    }
     
     // Verify database
     $checkResult = $db->query("SELECT name FROM sqlite_master WHERE type='table'");
