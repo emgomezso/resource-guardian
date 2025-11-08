@@ -7,23 +7,36 @@
 
 // Set error handling
 error_reporting(E_ALL);
-file_put_contents('/tmp/rg_cron_user.log', 'User: ' . get_current_user() . ', UID: ' . getmyuid() . "\n", FILE_APPEND);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 // Define paths
 define('BASE_DIR', '/opt/psa/var/modules/resource-guardian');
 define('DB_PATH', BASE_DIR . '/db/metrics.db');
+define('LOG_PATH', BASE_DIR . '/logs/cron.log');
+
+// Ensure log directory exists
+if (!is_dir(dirname(LOG_PATH))) {
+    @mkdir(dirname(LOG_PATH), 0755, true);
+}
+
+// Set error log to our log file
+ini_set('error_log', LOG_PATH);
 
 /**
  * Log message to file
  */
 function logMessage($message) {
     $timestamp = date('Y-m-d H:i:s');
-    error_log("[$timestamp] $message");
+    $logLine = "[$timestamp] $message\n";
+    error_log($logLine, 3, LOG_PATH);
+    // Also output to stdout so Plesk can capture it
+    echo $logLine;
 }
 
 try {
+    logMessage("Starting Resource Guardian monitoring...");
+    
     // Verify database exists
     if (!file_exists(DB_PATH)) {
         throw new Exception("Database not found at: " . DB_PATH);
@@ -92,7 +105,7 @@ try {
         }
     } catch (Exception $e) {
         // MySQL monitoring is optional, don't fail if not available
-        logMessage("MySQL monitoring failed: " . $e->getMessage());
+        logMessage("MySQL monitoring skipped: " . $e->getMessage());
     }
 
     // Insert metrics into database
@@ -115,20 +128,18 @@ try {
     $result = $stmt->execute();
 
     if (!$result) {
-        // CORRECCIÓN: Captura el error de la base de datos y lánzalo
         $errorMsg = $db->lastErrorMsg();
         throw new Exception("Failed to insert metrics. SQLite Error: " . $errorMsg);
     }
 
     // Log success
     $message = sprintf(
-        "Metrics collected - CPU: %.2f%%, RAM: %.2f%%, MySQL Connections: %d",
+        "✓ Metrics collected - CPU: %.2f%%, RAM: %.2f%%, MySQL Connections: %d",
         $cpuUsage,
         $ramUsage,
         $mysqlConnections
     );
     logMessage($message);
-    echo "$message\n";
 
     // Check thresholds and generate alerts
     $config = [];
@@ -163,12 +174,13 @@ try {
     $db->exec("DELETE FROM alerts WHERE timestamp < {$cleanupTime}");
 
     $db->close();
+    
+    logMessage("Monitoring cycle completed successfully");
     exit(0);
 
 } catch (Exception $e) {
-    $errorMsg = "Resource Guardian Error: " . $e->getMessage();
+    $errorMsg = "✗ Resource Guardian Error: " . $e->getMessage();
     logMessage($errorMsg);
-    echo "$errorMsg\n";
     exit(1);
 }
 
