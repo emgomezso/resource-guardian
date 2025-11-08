@@ -19,10 +19,7 @@ class IndexController extends pm_Controller_Action
         if (!file_exists($this->dbPath)) {
             $this->initializeDatabase();
         }
-        
-        // Set page title
-        $this->view->pageTitle = $this->lmsg('Resource Guardian Dashboard');
-
+        $this->view->pageTitle = 'Resource Guardian Dashboard';
     }
     
     /**
