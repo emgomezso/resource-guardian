@@ -47,19 +47,14 @@ try {
     // Read and execute SQL file
     $sql = file_get_contents($sqlFile);
     
-    // Split by semicolon and execute each statement
-    $statements = array_filter(
-        array_map('trim', explode(';', $sql)),
-        function($stmt) { return !empty($stmt) && strpos($stmt, '--') !== 0; }
-    );
+    // Execute the entire SQL file at once
+    // SQLite3::exec() can handle multiple statements separated by semicolons
+    $result = @$db->exec($sql);
     
-    foreach ($statements as $statement) {
-        if (!empty($statement)) {
-            $result = $db->exec($statement);
-            if ($result === false) {
-                throw new Exception("Failed to execute SQL: " . $db->lastErrorMsg());
-            }
-        }
+    if ($result === false) {
+        $error = $db->lastErrorMsg();
+        pm_Log::err("SQL execution error: " . $error);
+        throw new Exception("Failed to execute SQL: " . $error);
     }
     
     // Set proper permissions
