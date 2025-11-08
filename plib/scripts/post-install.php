@@ -1,7 +1,7 @@
 <?php
 /**
  * Post-installation script for Resource Guardian
- * Sets up cron job using correct database schema
+ * Sets up cron job using Plesk API
  */
 
 // CRÍTICO: Inicializar el contexto de Plesk
@@ -17,7 +17,7 @@ if (!is_dir($logDir)) {
     @chgrp($logDir, 'psaadm');
 }
 
-// Create cron job using direct database insertion with correct schema
+// Create cron job using Plesk API
 try {
     $scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
     
@@ -26,40 +26,38 @@ try {
         throw new Exception("Monitor script not found at: {$scriptPath}");
     }
     
-    // Get database adapter
-    $db = pm_Bootstrap::getDbAdapter();
-    
     // Remove existing task if any
     try {
-        $db->delete('ScheduledTasks', "description = 'Resource Guardian - System Monitoring'");
+        $existingTasks = pm_ScheduledTask::getAllByDescription('Resource Guardian - System Monitoring');
+        foreach ($existingTasks as $task) {
+            pm_ScheduledTask::remove($task->getId());
+        }
     } catch (Exception $e) {
         // Continue if no task exists
+        pm_Log::debug('No existing task to remove: ' . $e->getMessage());
     }
     
-    // Get service node ID (usually 1)
-    $serviceNodeId = 1;
+    // Create new scheduled task using Plesk API
+    $fullCommand = '/opt/plesk/php/8.3/bin/php ' . escapeshellarg($scriptPath);
     
-    // Insert new task with correct column names
-    $db->insert('ScheduledTasks', array(
-        'hash' => md5('resource-guardian-monitor-' . time()),
-        'serviceNodeId' => $serviceNodeId,
-        'sysUserId' => null,
-        'sysUserLogin' => 'root',
-        'isActive' => 1,
-        'type' => 'exec',
-        'phpHandlerId' => null,
-        'command' => '/opt/plesk/php/8.3/bin/php ' . $scriptPath,
-        'arguments' => '',
-        'description' => 'Resource Guardian - System Monitoring',
+    $task = new pm_ScheduledTask();
+    $task->setDescription('Resource Guardian - System Monitoring');
+    $task->setCommand($fullCommand);
+    $task->setSchedule([
         'minute' => '*',
         'hour' => '*',
-        'dayOfMonth' => '*',
+        'day' => '*',
         'month' => '*',
-        'dayOfWeek' => '*'
-    ));
+        'weekday' => '*'
+    ]);
+    $task->setEnabled(true);
     
-    pm_Log::info('Cron job created successfully: ' . $scriptPath);
+    // Save the task
+    $taskId = $task->create();
+    
+    pm_Log::info('Cron job created successfully with ID: ' . $taskId);
     echo "✓ Cron job created successfully\n";
+    echo "  Task ID: {$taskId}\n";
     echo "  Script: {$scriptPath}\n";
     echo "  Schedule: Every minute (* * * * *)\n";
     
@@ -68,5 +66,6 @@ try {
     pm_Log::err($errorMsg);
     error_log($errorMsg);
     echo "✗ Error: " . $e->getMessage() . "\n";
+    echo "  Stack trace: " . $e->getTraceAsString() . "\n";
     exit(1);
 }
