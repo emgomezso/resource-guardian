@@ -1,7 +1,7 @@
 <?php
 /**
  * Post-installation script for Resource Guardian
- * Sets up cron job using Plesk CLI
+ * Sets up cron job using Plesk task-manager
  */
 
 // CRÍTICO: Inicializar el contexto de Plesk
@@ -17,7 +17,7 @@ if (!is_dir($logDir)) {
     @chgrp($logDir, 'psaadm');
 }
 
-// Create cron job using Plesk CLI
+// Create cron job using system crontab
 try {
     $scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
     
@@ -26,56 +26,58 @@ try {
         throw new Exception("Monitor script not found at: {$scriptPath}");
     }
     
-    $taskName = 'resource-guardian-monitor';
-    $taskDescription = 'Resource Guardian - System Monitoring';
+    $cronLine = "* * * * * /opt/plesk/php/8.3/bin/php " . escapeshellarg($scriptPath) . " >> " . escapeshellarg($logDir . '/cron.log') . " 2>&1";
+    $cronIdentifier = "# Resource Guardian Monitor";
     
-    // Remove existing task if any
-    try {
-        $checkCmd = '/usr/local/psa/bin/task --list 2>/dev/null | grep "' . $taskName . '"';
-        $existingTask = shell_exec($checkCmd);
+    // Get current crontab
+    $currentCrontab = shell_exec('crontab -l 2>/dev/null');
+    
+    // Remove existing Resource Guardian cron if present
+    if ($currentCrontab) {
+        $lines = explode("\n", $currentCrontab);
+        $newLines = [];
+        $skipNext = false;
         
-        if (!empty($existingTask)) {
-            $removeCmd = '/usr/local/psa/bin/task --delete "' . $taskName . '" 2>&1';
-            shell_exec($removeCmd);
-            pm_Log::debug('Removed existing task: ' . $taskName);
+        foreach ($lines as $line) {
+            if (strpos($line, $cronIdentifier) !== false) {
+                $skipNext = true;
+                continue;
+            }
+            if ($skipNext && strpos($line, 'cron-monitor.php') !== false) {
+                $skipNext = false;
+                continue;
+            }
+            $skipNext = false;
+            if (!empty(trim($line))) {
+                $newLines[] = $line;
+            }
         }
-    } catch (Exception $e) {
-        pm_Log::debug('No existing task to remove: ' . $e->getMessage());
+        $currentCrontab = implode("\n", $newLines);
     }
     
-    // Create new scheduled task using Plesk CLI
-    $command = '/opt/plesk/php/8.3/bin/php ' . escapeshellarg($scriptPath);
+    // Add new cron job
+    $newCrontab = trim($currentCrontab) . "\n" . $cronIdentifier . "\n" . $cronLine . "\n";
     
-    $createCmd = sprintf(
-        '/usr/local/psa/bin/task --create %s --command=%s --description=%s --schedule=%s 2>&1',
-        escapeshellarg($taskName),
-        escapeshellarg($command),
-        escapeshellarg($taskDescription),
-        escapeshellarg('* * * * *')
-    );
+    // Write to temporary file
+    $tmpFile = tempnam(sys_get_temp_dir(), 'cron');
+    file_put_contents($tmpFile, $newCrontab);
     
-    $output = shell_exec($createCmd);
-    $exitCode = 0;
+    // Install new crontab
+    $output = shell_exec("crontab " . escapeshellarg($tmpFile) . " 2>&1");
+    unlink($tmpFile);
     
-    // Check if command was successful
-    if (stripos($output, 'error') !== false || stripos($output, 'failed') !== false) {
-        throw new Exception("Failed to create task: " . $output);
-    }
-    
-    // Verify task was created
-    $verifyCmd = '/usr/local/psa/bin/task --list 2>&1 | grep "' . $taskName . '"';
-    $verifyOutput = shell_exec($verifyCmd);
+    // Verify installation
+    $verifyOutput = shell_exec('crontab -l 2>&1 | grep "cron-monitor.php"');
     
     if (empty($verifyOutput)) {
-        throw new Exception("Task was not created successfully. CLI output: " . $output);
+        throw new Exception("Cron job was not installed. Output: " . $output);
     }
     
-    pm_Log::info('Cron job created successfully: ' . $taskName);
+    pm_Log::info('Cron job created successfully in system crontab');
     echo "✓ Cron job created successfully\n";
-    echo "  Task name: {$taskName}\n";
     echo "  Script: {$scriptPath}\n";
     echo "  Schedule: Every minute (* * * * *)\n";
-    echo "  Command output: {$output}\n";
+    echo "  Log file: {$logDir}/cron.log\n";
     
 } catch (Exception $e) {
     $errorMsg = 'Resource Guardian Cron Error: ' . $e->getMessage();
