@@ -1,7 +1,7 @@
 <?php
 /**
  * Post-installation script for Resource Guardian
- * Sets up cron job using Plesk API
+ * Sets up cron job using Plesk CLI
  */
 
 // CRÍTICO: Inicializar el contexto de Plesk
@@ -17,7 +17,7 @@ if (!is_dir($logDir)) {
     @chgrp($logDir, 'psaadm');
 }
 
-// Create cron job using Plesk API
+// Create cron job using Plesk CLI
 try {
     $scriptPath = pm_Context::getPlibDir() . 'scripts/cron-monitor.php';
     
@@ -26,40 +26,56 @@ try {
         throw new Exception("Monitor script not found at: {$scriptPath}");
     }
     
+    $taskName = 'resource-guardian-monitor';
+    $taskDescription = 'Resource Guardian - System Monitoring';
+    
     // Remove existing task if any
     try {
-        $existingTasks = pm_ScheduledTask::getAllByDescription('Resource Guardian - System Monitoring');
-        foreach ($existingTasks as $task) {
-            pm_ScheduledTask::remove($task->getId());
+        $checkCmd = '/usr/local/psa/bin/task --list 2>/dev/null | grep "' . $taskName . '"';
+        $existingTask = shell_exec($checkCmd);
+        
+        if (!empty($existingTask)) {
+            $removeCmd = '/usr/local/psa/bin/task --delete "' . $taskName . '" 2>&1';
+            shell_exec($removeCmd);
+            pm_Log::debug('Removed existing task: ' . $taskName);
         }
     } catch (Exception $e) {
-        // Continue if no task exists
         pm_Log::debug('No existing task to remove: ' . $e->getMessage());
     }
     
-    // Create new scheduled task using Plesk API
-    $fullCommand = '/opt/plesk/php/8.3/bin/php ' . escapeshellarg($scriptPath);
+    // Create new scheduled task using Plesk CLI
+    $command = '/opt/plesk/php/8.3/bin/php ' . escapeshellarg($scriptPath);
     
-    $task = new pm_ScheduledTask();
-    $task->setDescription('Resource Guardian - System Monitoring');
-    $task->setCommand($fullCommand);
-    $task->setSchedule([
-        'minute' => '*',
-        'hour' => '*',
-        'day' => '*',
-        'month' => '*',
-        'weekday' => '*'
-    ]);
-    $task->setEnabled(true);
+    $createCmd = sprintf(
+        '/usr/local/psa/bin/task --create %s --command=%s --description=%s --schedule=%s 2>&1',
+        escapeshellarg($taskName),
+        escapeshellarg($command),
+        escapeshellarg($taskDescription),
+        escapeshellarg('* * * * *')
+    );
     
-    // Save the task
-    $taskId = $task->create();
+    $output = shell_exec($createCmd);
+    $exitCode = 0;
     
-    pm_Log::info('Cron job created successfully with ID: ' . $taskId);
+    // Check if command was successful
+    if (stripos($output, 'error') !== false || stripos($output, 'failed') !== false) {
+        throw new Exception("Failed to create task: " . $output);
+    }
+    
+    // Verify task was created
+    $verifyCmd = '/usr/local/psa/bin/task --list 2>&1 | grep "' . $taskName . '"';
+    $verifyOutput = shell_exec($verifyCmd);
+    
+    if (empty($verifyOutput)) {
+        throw new Exception("Task was not created successfully. CLI output: " . $output);
+    }
+    
+    pm_Log::info('Cron job created successfully: ' . $taskName);
     echo "✓ Cron job created successfully\n";
-    echo "  Task ID: {$taskId}\n";
+    echo "  Task name: {$taskName}\n";
     echo "  Script: {$scriptPath}\n";
     echo "  Schedule: Every minute (* * * * *)\n";
+    echo "  Command output: {$output}\n";
     
 } catch (Exception $e) {
     $errorMsg = 'Resource Guardian Cron Error: ' . $e->getMessage();
