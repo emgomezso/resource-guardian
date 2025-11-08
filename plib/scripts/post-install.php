@@ -1,4 +1,3 @@
-
 <?php
 /**
  * Post-installation script for Resource Guardian
@@ -11,11 +10,82 @@ pm_Context::init('resource-guardian');
 // Create directories if needed
 $varDir = pm_Context::getVarDir();
 $logDir = $varDir . '/logs';
+$dbDir = $varDir . '/db';
 
 if (!is_dir($logDir)) {
     mkdir($logDir, 0755, true);
     @chown($logDir, 'psaadm');
     @chgrp($logDir, 'psaadm');
+}
+
+if (!is_dir($dbDir)) {
+    mkdir($dbDir, 0755, true);
+    @chown($dbDir, 'psaadm');
+    @chgrp($dbDir, 'psaadm');
+}
+
+// Initialize database
+try {
+    $dbPath = $dbDir . '/metrics.db';
+    $sqlFile = pm_Context::getPlibDir() . 'resources/database.sql';
+    
+    // Verify SQL file exists
+    if (!file_exists($sqlFile)) {
+        throw new Exception("Database SQL file not found at: {$sqlFile}");
+    }
+    
+    // Remove old database if exists
+    if (file_exists($dbPath)) {
+        unlink($dbPath);
+        pm_Log::debug('Removed old database');
+    }
+    
+    // Create new database
+    $db = new SQLite3($dbPath);
+    $db->busyTimeout(5000);
+    
+    // Read and execute SQL file
+    $sql = file_get_contents($sqlFile);
+    
+    // Split by semicolon and execute each statement
+    $statements = array_filter(
+        array_map('trim', explode(';', $sql)),
+        function($stmt) { return !empty($stmt) && strpos($stmt, '--') !== 0; }
+    );
+    
+    foreach ($statements as $statement) {
+        if (!empty($statement)) {
+            $result = $db->exec($statement);
+            if ($result === false) {
+                throw new Exception("Failed to execute SQL: " . $db->lastErrorMsg());
+            }
+        }
+    }
+    
+    // Set proper permissions
+    chmod($dbPath, 0644);
+    @chown($dbPath, 'psaadm');
+    @chgrp($dbPath, 'psaadm');
+    
+    // Verify database
+    $checkResult = $db->query("SELECT name FROM sqlite_master WHERE type='table'");
+    $tables = [];
+    while ($row = $checkResult->fetchArray(SQLITE3_ASSOC)) {
+        $tables[] = $row['name'];
+    }
+    
+    $db->close();
+    
+    pm_Log::info('Database initialized successfully with tables: ' . implode(', ', $tables));
+    echo "✓ Database initialized successfully\n";
+    echo "  Database: {$dbPath}\n";
+    echo "  Tables: " . implode(', ', $tables) . "\n";
+    
+} catch (Exception $e) {
+    $errorMsg = 'Database initialization error: ' . $e->getMessage();
+    pm_Log::err($errorMsg);
+    echo "✗ Warning: " . $errorMsg . "\n";
+    // Don't exit - continue with cron setup
 }
 
 // Create cron job using Plesk database
