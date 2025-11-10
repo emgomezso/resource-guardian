@@ -146,17 +146,34 @@
         }
 
         function loadMetrics() {
-            // Get base URL from Plesk context
-            const baseUrl = '<?php echo pm_Context::getBaseUrl(); ?>';
-            
-            fetch(baseUrl + 'index/metrics-json?hours=24')
-                .then(response => response.json())
-                .then(data => {
+        // Get base URL from Plesk context
+        const baseUrl = '<?php echo pm_Context::getBaseUrl(); ?>';
+        const fullUrl = baseUrl + 'index/metrics-json?hours=24';
+    
+        console.log('Base URL:', baseUrl);
+        console.log('Full URL:', fullUrl);
+        console.log('Fetching metrics...');
+    
+        fetch(fullUrl)
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                return response.text();
+            })
+            .then(text => {
+                console.log('Raw response:', text);
+                try {
+                    const data = JSON.parse(text);
+                    console.log('Parsed data:', data);
                     updateChart(data);
-                })
-                .catch(error => {
-                    console.error('Error loading metrics:', error);
-                });
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    console.error('Response was:', text);
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+            });
         }
 
         function updateChart(metrics) {
