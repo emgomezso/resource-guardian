@@ -10,7 +10,8 @@
     const CONFIG = {
         refreshInterval: 30000,      // 30 seconds
         chartRefreshInterval: 300000, // 5 minutes
-        baseUrl: typeof pm_context !== 'undefined' ? pm_context.baseUrl : '/modules/resource-guardian/',
+        // Use relative path from current page
+        baseUrl: window.location.pathname.replace(/\/[^\/]*$/, '/'),
         thresholds: {
             cpu: { warning: 70, critical: 85 },
             ram: { warning: 75, critical: 90 }
@@ -25,6 +26,7 @@
      */
     document.addEventListener('DOMContentLoaded', function() {
         console.log('Resource Guardian: Initializing dashboard...');
+        console.log('Base URL:', CONFIG.baseUrl);
         
         initializeChart();
         loadMetrics();
@@ -142,22 +144,32 @@
      * Load historical metrics data
      */
     function loadMetrics(hours = 24) {
-        const url = CONFIG.baseUrl + 'index/metrics-json?hours=' + hours;
+        const url = CONFIG.baseUrl + 'metrics-json?hours=' + hours;
+        console.log('Loading metrics from:', url);
         
         fetch(url)
             .then(response => {
+                console.log('Response status:', response.status);
                 if (!response.ok) {
                     throw new Error('HTTP error ' + response.status);
                 }
                 return response.json();
             })
             .then(data => {
-                console.log('Metrics loaded:', data.length + ' records');
-                updateChart(data);
+                console.log('Metrics loaded:', data);
+                if (data.status === 'error') {
+                    throw new Error(data.message);
+                }
+                if (Array.isArray(data)) {
+                    console.log('Processing', data.length, 'records');
+                    updateChart(data);
+                } else {
+                    console.warn('Unexpected data format:', data);
+                }
             })
             .catch(error => {
                 console.error('Error loading metrics:', error);
-                showError('Failed to load metrics data');
+                showError('Failed to load metrics data: ' + error.message);
             });
     }
 
@@ -165,8 +177,13 @@
      * Update chart with new data
      */
     function updateChart(metrics) {
-        if (!metricsChart || !metrics || metrics.length === 0) {
-            console.warn('Cannot update chart: chart not initialized or no data');
+        if (!metricsChart) {
+            console.warn('Cannot update chart: chart not initialized');
+            return;
+        }
+
+        if (!metrics || metrics.length === 0) {
+            console.warn('No metrics data to display');
             return;
         }
 
@@ -195,7 +212,8 @@
      * Update current metrics display
      */
     function updateCurrentMetrics() {
-        const url = CONFIG.baseUrl + 'index/current-json';
+        const url = CONFIG.baseUrl + 'current-json';
+        console.log('Updating current metrics from:', url);
         
         fetch(url)
             .then(response => {
@@ -205,7 +223,11 @@
                 return response.json();
             })
             .then(data => {
-                if (data && !data.status) {
+                console.log('Current metrics response:', data);
+                if (data.status === 'error') {
+                    throw new Error(data.message);
+                }
+                if (data.status === 'success' || data.timestamp) {
                     // Update display values
                     updateElement('cpu-value', data.cpu_usage.toFixed(1) + '%');
                     updateElement('ram-value', data.ram_usage.toFixed(1) + '%');
@@ -215,7 +237,7 @@
                     updateStatusIndicator('cpu', data.cpu_usage);
                     updateStatusIndicator('ram', data.ram_usage);
 
-                    console.log('Current metrics updated:', data);
+                    console.log('Current metrics updated successfully');
                 }
             })
             .catch(error => {
@@ -401,7 +423,7 @@
             notification.className = 'notification notification-' + type;
             notification.textContent = message;
             notification.style.cssText = 'position:fixed;top:20px;right:20px;padding:15px 20px;background:' + 
-                (type === 'success' ? '#4CAF50' : '#F44336') + ';color:white;border-radius:4px;z-index:9999;';
+                (type === 'success' ? '#4CAF50' : '#F44336') + ';color:white;border-radius:4px;z-index:9999;box-shadow:0 2px 5px rgba(0,0,0,0.2);';
             document.body.appendChild(notification);
             
             setTimeout(() => notification.remove(), 3000);
