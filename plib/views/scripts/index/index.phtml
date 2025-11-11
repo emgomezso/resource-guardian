@@ -85,6 +85,31 @@
             color: #333;
         }
         
+        .table-wrapper {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
         .table {
             width: 100%;
             border-collapse: collapse;
@@ -97,6 +122,9 @@
             font-weight: 600;
             color: #666;
             border-bottom: 2px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         
         .table td {
@@ -157,7 +185,7 @@
 <body>
     <div class="resource-guardian-dashboard">
         <div class="auto-refresh">
-            <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
+            <button class="refresh-btn" onclick="location.reload()">Refresh</button>
             <span id="last-update">Last updated: <?php echo date('Y-m-d H:i:s'); ?></span>
         </div>
         
@@ -196,7 +224,8 @@
         
         <!-- Recent Metrics Table -->
         <div class="metrics-table-container">
-            <h3>Recent Metrics (Last 24 Hours)</h3>
+            <h3>Recent Metrics</h3>
+            <div class="table-wrapper">
             <?php
             try {
                 $db = new SQLite3(pm_Context::getVarDir() . '/db/metrics.db');
@@ -241,11 +270,13 @@
                 echo '<div class="no-data">Error loading metrics: ' . htmlspecialchars($e->getMessage()) . '</div>';
             }
             ?>
+            </div>
         </div>
         
         <!-- Recent Alerts Table -->
         <div class="metrics-table-container">
             <h3>Recent Alerts</h3>
+            <div class="table-wrapper">
             <table class="table">
                 <thead>
                     <tr>
