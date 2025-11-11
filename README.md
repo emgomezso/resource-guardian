@@ -41,6 +41,27 @@ plesk bin extension --install /root/resource-guardian.zip
    - Find "Resource Guardian"
    - Press the open button
 
+
+## Troubleshooting
+
+Error in the scheduled task in Plesk
+If the scheduled task for using Resource Guardian fails, you will need to create the scheduled task manually.
+The steps are as follows:
+
+1. Go to Home -> Tools & Settings -> Scheduled Tasks
+
+2. Click the Add Task button
+
+3. In the task scheduling field, complete the following:
+- **Task Type:** Run a command
+- **Command:** /opt/plesk/php/8.3/bin/php /opt/psa/admin/plib/modules/resource-guardian/scripts/cron-monitor.php
+- **Run:** Cron style / **Format:** ***** (box next to the cron style option)
+- **System User:** root
+- **Description:** Resource Guardian - System Monitoring
+- **Notify:** Do not notify
+
+4. Click the OK button
+
 ## Configuration
 
 Default thresholds:
