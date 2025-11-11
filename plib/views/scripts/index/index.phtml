@@ -224,7 +224,7 @@
         
         <!-- Recent Metrics Table -->
         <div class="metrics-table-container">
-            <h3>Recent Metrics</h3>
+            <h3>Recent Metrics (Last Hour)</h3>
             <div class="table-wrapper">
             <?php
             try {
@@ -232,7 +232,7 @@
                 $db->busyTimeout(5000);
                 
                 $since = time() - (24 * 3600);
-                $result = $db->query("SELECT * FROM metrics WHERE timestamp >= {$since} ORDER BY timestamp DESC LIMIT 50");
+                $result = $db->query("SELECT * FROM metrics WHERE timestamp >= {$since} ORDER BY timestamp DESC LIMIT 60");
                 
                 $hasData = false;
                 echo '<table class="table">';
