@@ -263,10 +263,136 @@
     </style>
 </head>
 <body>
+    <?php
+    // Handle configuration form submission
+    $savedMessage = '';
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
+        try {
+            $db = new SQLite3(pm_Context::getVarDir() . '/db/metrics.db');
+            $db->busyTimeout(5000);
+            
+            // Save alert email
+            $alertEmail = trim($_POST['alert_email'] ?? '');
+            $stmt = $db->prepare("INSERT OR REPLACE INTO config (key, value) VALUES ('alert_email', ?)");
+            $stmt->bindValue(1, $alertEmail, SQLITE3_TEXT);
+            $stmt->execute();
+            
+            // Save enable email alerts
+            $enableAlerts = isset($_POST['enable_email_alerts']) ? '1' : '0';
+            $stmt = $db->prepare("INSERT OR REPLACE INTO config (key, value) VALUES ('enable_email_alerts', ?)");
+            $stmt->bindValue(1, $enableAlerts, SQLITE3_TEXT);
+            $stmt->execute();
+            
+            // Save CPU thresholds
+            $cpuWarning = intval($_POST['cpu_warning'] ?? 70);
+            $cpuCritical = intval($_POST['cpu_critical'] ?? 85);
+            $stmt = $db->prepare("INSERT OR REPLACE INTO config (key, value) VALUES ('cpu_warning_threshold', ?)");
+            $stmt->bindValue(1, $cpuWarning, SQLITE3_TEXT);
+            $stmt->execute();
+            $stmt = $db->prepare("INSERT OR REPLACE INTO config (key, value) VALUES ('cpu_critical_threshold', ?)");
+            $stmt->bindValue(1, $cpuCritical, SQLITE3_TEXT);
+            $stmt->execute();
+            
+            // Save RAM thresholds
+            $ramWarning = intval($_POST['ram_warning'] ?? 75);
+            $ramCritical = intval($_POST['ram_critical'] ?? 90);
+            $stmt = $db->prepare("INSERT OR REPLACE INTO config (key, value) VALUES ('ram_warning_threshold', ?)");
+            $stmt->bindValue(1, $ramWarning, SQLITE3_TEXT);
+            $stmt->execute();
+            $stmt = $db->prepare("INSERT OR REPLACE INTO config (key, value) VALUES ('ram_critical_threshold', ?)");
+            $stmt->bindValue(1, $ramCritical, SQLITE3_TEXT);
+            $stmt->execute();
+            
+            $db->close();
+            $savedMessage = '<div class="alert alert-success">✓ Configuration saved successfully!</div>';
+        } catch (Exception $e) {
+            $savedMessage = '<div class="alert alert-error">✗ Error saving configuration: ' . htmlspecialchars($e->getMessage()) . '</div>';
+        }
+    }
+    
+    // Load current configuration
+    $currentConfig = [
+        'alert_email' => '',
+        'enable_email_alerts' => '1',
+        'cpu_warning_threshold' => '70',
+        'cpu_critical_threshold' => '85',
+        'ram_warning_threshold' => '75',
+        'ram_critical_threshold' => '90'
+    ];
+    
+    try {
+        $db = new SQLite3(pm_Context::getVarDir() . '/db/metrics.db');
+        $db->busyTimeout(5000);
+        $result = $db->query("SELECT key, value FROM config");
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            if (isset($currentConfig[$row['key']])) {
+                $currentConfig[$row['key']] = $row['value'];
+            }
+        }
+        $db->close();
+    } catch (Exception $e) {
+        // Use defaults if error
+    }
+    ?>
+    
     <div class="resource-guardian-dashboard">
         <div class="auto-refresh">
             <button class="refresh-btn" onclick="location.reload()">Refresh</button>
             <span id="last-update">Last updated: <?php echo date('Y-m-d H:i:s'); ?></span>
+        </div>
+        
+        <!-- Configuration Section -->
+        <div class="config-section">
+            <h3>Configuration</h3>
+            <?php echo $savedMessage; ?>
+            <form method="POST" action="">
+                <div class="form-group">
+                    <label for="alert_email">Alert Email Address:</label>
+                    <input type="email" id="alert_email" name="alert_email" 
+                           value="<?php echo htmlspecialchars($currentConfig['alert_email']); ?>" 
+                           placeholder="your-email@example.com">
+                    <small>Email address to receive alert notifications. Leave empty to disable email alerts.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="enable_email_alerts" value="1" 
+                               <?php echo $currentConfig['enable_email_alerts'] == '1' ? 'checked' : ''; ?>>
+                        Enable Email Alerts
+                    </label>
+                    <small>Uncheck to temporarily disable email notifications without removing the email address.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cpu_warning">CPU Warning Threshold (%):</label>
+                    <input type="number" id="cpu_warning" name="cpu_warning" min="1" max="100" 
+                           value="<?php echo htmlspecialchars($currentConfig['cpu_warning_threshold']); ?>">
+                    <small>Send a warning alert when CPU usage exceeds this percentage.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cpu_critical">CPU Critical Threshold (%):</label>
+                    <input type="number" id="cpu_critical" name="cpu_critical" min="1" max="100" 
+                           value="<?php echo htmlspecialchars($currentConfig['cpu_critical_threshold']); ?>">
+                    <small>Send a critical alert when CPU usage exceeds this percentage.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ram_warning">RAM Warning Threshold (%):</label>
+                    <input type="number" id="ram_warning" name="ram_warning" min="1" max="100" 
+                           value="<?php echo htmlspecialchars($currentConfig['ram_warning_threshold']); ?>">
+                    <small>Send a warning alert when RAM usage exceeds this percentage.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ram_critical">RAM Critical Threshold (%):</label>
+                    <input type="number" id="ram_critical" name="ram_critical" min="1" max="100" 
+                           value="<?php echo htmlspecialchars($currentConfig['ram_critical_threshold']); ?>">
+                    <small>Send a critical alert when RAM usage exceeds this percentage.</small>
+                </div>
+                
+                <button type="submit" name="save_config" class="btn-save">💾 Save Configuration</button>
+            </form>
         </div>
         
         <!-- Current Status Cards -->
@@ -312,7 +438,7 @@
                 $db->busyTimeout(5000);
                 
                 $since = time() - (24 * 3600);
-                $result = $db->query("SELECT * FROM metrics WHERE timestamp >= {$since} ORDER BY timestamp DESC LIMIT 60");
+                $result = $db->query("SELECT * FROM metrics WHERE timestamp >= {$since} ORDER BY timestamp DESC LIMIT 50");
                 
                 $hasData = false;
                 echo '<table class="table">';
