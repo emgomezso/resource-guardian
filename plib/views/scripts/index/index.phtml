@@ -10,7 +10,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/modules/resource-guardian/css/style.css">
-    <script src="/modules/resource-guardian/js/chart.min.js"></script>
 </head>
 <body>
     <div class="resource-guardian-dashboard">
@@ -92,24 +91,60 @@
             </table>
         </div>
     </div>
+
+    <!-- Load Chart.js dynamically to avoid AMD conflicts -->
+    <script>
+        (function() {
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+            script.onload = function() {
+                console.log('Chart.js loaded successfully');
+                initDashboard();
+            };
+            script.onerror = function() {
+                console.error('Failed to load Chart.js');
+            };
+            document.head.appendChild(script);
+        })();
+    </script>
     
     <!-- Dashboard JavaScript -->
     <script>
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        let metricsChart;
+        
+        function initDashboard() {
+            console.log('Initializing dashboard...');
+            
+            // Wait for DOM if not ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', startDashboard);
+            } else {
+                startDashboard();
+            }
+        }
+        
+        function startDashboard() {
             initializeChart();
             loadMetrics();
             startAutoRefresh();
             updateStatusIndicators();
-        });
-
-        let metricsChart;
+        }
 
         function initializeChart() {
-            const ctx = document.getElementById('metricsChart');
-            if (!ctx) return;
+            const canvas = document.getElementById('metricsChart');
+            if (!canvas) {
+                console.error('Chart canvas not found');
+                return;
+            }
             
-            metricsChart = new Chart(ctx.getContext('2d'), {
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js not loaded');
+                return;
+            }
+            
+            console.log('Creating chart...');
+            
+            metricsChart = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
                     labels: [],
@@ -119,14 +154,16 @@
                             data: [],
                             borderColor: 'rgb(255, 99, 132)',
                             backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                            tension: 0.1
+                            tension: 0.4,
+                            borderWidth: 2
                         },
                         {
                             label: 'RAM Usage (%)',
                             data: [],
                             borderColor: 'rgb(54, 162, 235)',
                             backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                            tension: 0.1
+                            tension: 0.4,
+                            borderWidth: 2
                         }
                     ]
                 },
@@ -136,46 +173,62 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            max: 100
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
                         }
                     }
                 }
             });
+            
+            console.log('Chart created successfully');
         }
 
         function loadMetrics() {
-        // Get base URL from Plesk context
-        const baseUrl = '<?php echo pm_Context::getBaseUrl(); ?>';
-        const fullUrl = baseUrl + 'index/metrics-json?hours=24';
-    
-        console.log('Base URL:', baseUrl);
-        console.log('Full URL:', fullUrl);
-        console.log('Fetching metrics...');
-    
-        fetch(fullUrl)
-            .then(response => {
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-                return response.text();
-            })
-            .then(text => {
-                console.log('Raw response:', text);
-                try {
-                    const data = JSON.parse(text);
-                    console.log('Parsed data:', data);
-                    updateChart(data);
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                    console.error('Response was:', text);
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error:', error);
-            });
+            const baseUrl = '<?php echo pm_Context::getBaseUrl(); ?>';
+            const fullUrl = baseUrl + 'index/metrics-json?hours=24';
+            
+            console.log('Base URL:', baseUrl);
+            console.log('Full URL:', fullUrl);
+            console.log('Fetching metrics...');
+            
+            fetch(fullUrl)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.text();
+                })
+                .then(text => {
+                    console.log('Raw response:', text.substring(0, 200));
+                    try {
+                        const data = JSON.parse(text);
+                        console.log('Parsed data:', data.length, 'records');
+                        updateChart(data);
+                    } catch (e) {
+                        console.error('JSON parse error:', e);
+                        console.error('Response was:', text);
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                });
         }
 
         function updateChart(metrics) {
-            if (!metricsChart) return;
+            if (!metricsChart) {
+                console.warn('Chart not initialized yet');
+                return;
+            }
+            
+            if (!metrics || metrics.length === 0) {
+                console.warn('No metrics data');
+                return;
+            }
             
             const labels = [];
             const cpuData = [];
@@ -184,14 +237,16 @@
             metrics.forEach(metric => {
                 const date = new Date(metric.timestamp * 1000);
                 labels.push(date.toLocaleTimeString());
-                cpuData.push(metric.cpu_usage);
-                ramData.push(metric.ram_usage);
+                cpuData.push(parseFloat(metric.cpu_usage));
+                ramData.push(parseFloat(metric.ram_usage));
             });
             
             metricsChart.data.labels = labels;
             metricsChart.data.datasets[0].data = cpuData;
             metricsChart.data.datasets[1].data = ramData;
             metricsChart.update();
+            
+            console.log('Chart updated with', metrics.length, 'data points');
         }
 
         function updateCurrentMetrics() {
@@ -200,9 +255,9 @@
             fetch(baseUrl + 'index/current-json')
                 .then(response => response.json())
                 .then(data => {
-                    if (data) {
-                        document.getElementById('cpu-value').textContent = data.cpu_usage + '%';
-                        document.getElementById('ram-value').textContent = data.ram_usage + '%';
+                    if (data && data.status !== 'error') {
+                        document.getElementById('cpu-value').textContent = data.cpu_usage.toFixed(1) + '%';
+                        document.getElementById('ram-value').textContent = data.ram_usage.toFixed(1) + '%';
                         document.getElementById('mysql-value').textContent = data.mysql_connections;
                         
                         updateStatusIndicator('cpu', data.cpu_usage);
@@ -233,11 +288,22 @@
         }
 
         function updateStatusIndicators() {
-            const cpuValue = parseFloat(document.getElementById('cpu-value').textContent);
-            const ramValue = parseFloat(document.getElementById('ram-value').textContent);
+            const cpuEl = document.getElementById('cpu-value');
+            const ramEl = document.getElementById('ram-value');
             
-            updateStatusIndicator('cpu', cpuValue);
-            updateStatusIndicator('ram', ramValue);
+            if (cpuEl) {
+                const cpuValue = parseFloat(cpuEl.textContent);
+                if (!isNaN(cpuValue)) {
+                    updateStatusIndicator('cpu', cpuValue);
+                }
+            }
+            
+            if (ramEl) {
+                const ramValue = parseFloat(ramEl.textContent);
+                if (!isNaN(ramValue)) {
+                    updateStatusIndicator('ram', ramValue);
+                }
+            }
         }
 
         function startAutoRefresh() {
@@ -246,6 +312,8 @@
             
             // Refresh chart every 5 minutes
             setInterval(loadMetrics, 300000);
+            
+            console.log('Auto-refresh started');
         }
     </script>
 </body>
