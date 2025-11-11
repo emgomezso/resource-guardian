@@ -228,4 +228,98 @@ function createAlert($db, $type, $severity, $value, $threshold) {
     $stmt->execute();
 
     logMessage("Alert created: $message");
+    
+    // Send email notification
+    sendAlertEmail($db, $type, $severity, $message, $value, $threshold);
+}
+
+/**
+ * Send alert email notification
+ */
+function sendAlertEmail($db, $type, $severity, $message, $value, $threshold) {
+    // Get email configuration from database
+    $config = [];
+    $configResult = $db->query("SELECT key, value FROM config WHERE key IN ('alert_email', 'enable_email_alerts')");
+    while ($row = $configResult->fetchArray(SQLITE3_ASSOC)) {
+        $config[$row['key']] = $row['value'];
+    }
+    
+    // Check if email alerts are enabled
+    if (!isset($config['enable_email_alerts']) || $config['enable_email_alerts'] != '1') {
+        logMessage("Email alerts disabled, skipping notification");
+        return;
+    }
+    
+    // Check if email is configured
+    if (empty($config['alert_email'])) {
+        logMessage("No alert email configured, skipping notification");
+        return;
+    }
+    
+    $to = $config['alert_email'];
+    $hostname = gethostname();
+    
+    // Set email headers
+    $headers = "From: Resource Guardian <noreply@{$hostname}>\r\n";
+    $headers .= "Reply-To: noreply@{$hostname}\r\n";
+    $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+    
+    // Email subject
+    $subject = "[$severity] Resource Guardian Alert: $type on $hostname";
+    
+    // Email body (HTML)
+    $body = "
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #f44336; color: white; padding: 15px; border-radius: 5px 5px 0 0; }
+            .header.warning { background: #ff9800; }
+            .content { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 5px 5px; }
+            .metric { background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #f44336; }
+            .metric.warning { border-left-color: #ff9800; }
+            .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
+            h1 { margin: 0; font-size: 20px; }
+            h2 { color: #333; font-size: 16px; }
+            .value { font-size: 24px; font-weight: bold; color: #f44336; }
+            .value.warning { color: #ff9800; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header " . ($severity == 'warning' ? 'warning' : '') . "'>
+                <h1>Resource Guardian Alert</h1>
+            </div>
+            <div class='content'>
+                <h2>Alert Details</h2>
+                <div class='metric " . ($severity == 'warning' ? 'warning' : '') . "'>
+                    <strong>Server:</strong> {$hostname}<br>
+                    <strong>Resource:</strong> " . strtoupper($type) . "<br>
+                    <strong>Severity:</strong> " . strtoupper($severity) . "<br>
+                    <strong>Time:</strong> " . date('Y-m-d H:i:s') . "<br>
+                    <br>
+                    <div class='value " . ($severity == 'warning' ? 'warning' : '') . "'>{$value}%</div>
+                    <small>Threshold: {$threshold}%</small>
+                </div>
+                <p><strong>Message:</strong><br>{$message}</p>
+                <p>Please check your server's resource usage and take appropriate action if necessary.</p>
+            </div>
+            <div class='footer'>
+                <p>This is an automated alert from Resource Guardian monitoring system.<br>
+                Server: {$hostname} | Time: " . date('Y-m-d H:i:s') . "</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    ";
+    
+    // Send email
+    if (mail($to, $subject, $body, $headers)) {
+        logMessage("Alert email sent to: $to");
+    } else {
+        logMessage("Failed to send alert email to: $to");
+    }
 }
