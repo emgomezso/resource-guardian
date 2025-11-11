@@ -9,6 +9,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/modules/resource-guardian/css/style.css">
     <style>
         .resource-guardian-dashboard {
             padding: 20px;
@@ -520,20 +521,32 @@
     
     <!-- Simple auto-refresh script -->
     <script>
-        // Update status indicators on load
+        // Update status indicators on load using configured thresholds
         (function() {
+            // Get thresholds from PHP
+            const thresholds = {
+                cpu: {
+                    warning: <?php echo intval($currentConfig['cpu_warning_threshold']); ?>,
+                    critical: <?php echo intval($currentConfig['cpu_critical_threshold']); ?>
+                },
+                ram: {
+                    warning: <?php echo intval($currentConfig['ram_warning_threshold']); ?>,
+                    critical: <?php echo intval($currentConfig['ram_critical_threshold']); ?>
+                }
+            };
+            
             function updateStatusIndicator(type, value) {
                 const statusEl = document.getElementById(type + '-status');
                 if (!statusEl) return;
                 
                 let status = 'normal';
                 
-                if (type === 'cpu') {
-                    if (value >= 85) status = 'critical';
-                    else if (value >= 70) status = 'warning';
-                } else if (type === 'ram') {
-                    if (value >= 90) status = 'critical';
-                    else if (value >= 75) status = 'warning';
+                if (thresholds[type]) {
+                    if (value >= thresholds[type].critical) {
+                        status = 'critical';
+                    } else if (value >= thresholds[type].warning) {
+                        status = 'warning';
+                    }
                 }
                 
                 statusEl.className = 'metric-status status-' + status;
