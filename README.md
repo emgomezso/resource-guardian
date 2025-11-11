@@ -55,7 +55,7 @@ The steps are as follows:
 3. In the task scheduling field, complete the following:
 - **Task Type:** Run a command
 - **Command:** /opt/plesk/php/8.3/bin/php /opt/psa/admin/plib/modules/resource-guardian/scripts/cron-monitor.php
-- **Run:** Cron style / **Format:** ***** (box next to the cron style option)
+- **Run:** Cron style / **(Box next to the cron style option):** ***** 
 - **System User:** root
 - **Description:** Resource Guardian - System Monitoring
 - **Notify:** Do not notify
@@ -81,4 +81,3 @@ Team CL9
 Advanced Database Topics Course
 Professor: Manuel Espinoza Guerrero
 Date: 24/10/2025
-```
