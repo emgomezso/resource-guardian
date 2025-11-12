@@ -251,12 +251,12 @@ function sendAlertEmail($db, $type, $severity, $message, $value, $threshold) {
     }
     
     // Check if email is configured
-    if (empty($config['alert_email'])) {
+    if (empty($config['alert_email']) || trim($config['alert_email']) == '') {
         logMessage("No alert email configured, skipping notification");
         return;
     }
     
-    $to = $config['alert_email'];
+    $to = trim($config['alert_email']);
     $hostname = gethostname();
     
     // Set email headers
@@ -291,7 +291,7 @@ function sendAlertEmail($db, $type, $severity, $message, $value, $threshold) {
     <body>
         <div class='container'>
             <div class='header " . ($severity == 'warning' ? 'warning' : '') . "'>
-                <h1>Resource Guardian Alert</h1>
+                <h1>🚨 Resource Guardian Alert</h1>
             </div>
             <div class='content'>
                 <h2>Alert Details</h2>
@@ -316,10 +316,37 @@ function sendAlertEmail($db, $type, $severity, $message, $value, $threshold) {
     </html>
     ";
     
-    // Send email
-    if (mail($to, $subject, $body, $headers)) {
-        logMessage("Alert email sent to: $to");
+    // Try to send email using PHP mail function
+    $mailSent = @mail($to, $subject, $body, $headers);
+    
+    if ($mailSent) {
+        logMessage("Alert email sent successfully to: $to");
     } else {
-        logMessage("Failed to send alert email to: $to");
+        // If mail() fails, try using Plesk's mail system
+        logMessage("PHP mail() failed, trying Plesk mail system");
+        
+        // Create temporary file with email content
+        $tmpFile = tempnam(sys_get_temp_dir(), 'rg_email_');
+        file_put_contents($tmpFile, $body);
+        
+        // Try using sendmail directly
+        $sendmailCmd = "/usr/sbin/sendmail -t -i <<EOF
+To: {$to}
+From: Resource Guardian <noreply@{$hostname}>
+Subject: {$subject}
+Content-Type: text/html; charset=UTF-8
+
+{$body}
+EOF";
+        
+        exec($sendmailCmd, $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            logMessage("Alert email sent via sendmail to: $to");
+        } else {
+            logMessage("Failed to send alert email to: $to (Return code: {$returnCode})");
+        }
+        
+        @unlink($tmpFile);
     }
 }

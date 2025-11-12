@@ -16,6 +16,7 @@ Real-time server resource monitoring and alerting system for Plesk environments.
 - Plesk 18.0 or higher
 - PHP 7.4+
 - SQLite 3
+- Mailutils (apt install mailutils -y)
 - Linux-based server
 
 ## Installation
