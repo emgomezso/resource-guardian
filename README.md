@@ -4,12 +4,10 @@ Real-time server resource monitoring and alerting system for Plesk environments.
 
 ## Features
 
-- **Real-time Monitoring**: CPU, RAM, Disk I/O, and MySQL metrics
-- **Proactive Alerts**: Email and webhook notifications
+- **Real-time Monitoring**: CPU, RAM, Disk and MySQL metrics
 - **Visual Dashboard**: Interactive charts and status cards
 - **Configurable Thresholds**: Customize warning and critical levels
 - **Alert History**: Track and analyze past incidents
-- **Automatic Actions**: Optional automated responses to critical situations
 
 ## Requirements
 
