@@ -194,6 +194,37 @@
             margin: 0 0 20px 0;
             font-size: 18px;
             color: #333;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .config-section h3:hover {
+            color: #2196F3;
+        }
+        
+        .config-section h3 .toggle-icon {
+            transition: transform 0.3s ease;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .config-section h3 .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        .config-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+        
+        .config-content.collapsed {
+            max-height: 0;
+            opacity: 0;
         }
         
         .form-group {
@@ -343,9 +374,13 @@
         
         <!-- Configuration Section -->
         <div class="config-section">
-            <h3>Configuration</h3>
-            <?php echo $savedMessage; ?>
-            <form method="POST" action="">
+            <h3 onclick="toggleConfig()">
+                <span>Configuration</span>
+                <span class="toggle-icon" id="toggle-icon">▼</span>
+            </h3>
+            <div class="config-content" id="config-content">
+                <?php echo $savedMessage; ?>
+                <form method="POST" action="">
                 <div class="form-group">
                     <label for="alert_email">Alert Email Address:</label>
                     <input type="email" id="alert_email" name="alert_email" 
@@ -393,6 +428,7 @@
                 
                 <button type="submit" name="save_config" class="btn-save">Save Configuration</button>
             </form>
+            </div>
         </div>
         
         <!-- Current Status Cards -->
@@ -438,7 +474,7 @@
                 $db->busyTimeout(5000);
                 
                 $since = time() - (24 * 3600);
-                $result = $db->query("SELECT * FROM metrics WHERE timestamp >= {$since} ORDER BY timestamp DESC LIMIT 50");
+                $result = $db->query("SELECT * FROM metrics WHERE timestamp >= {$since} ORDER BY timestamp DESC LIMIT 60");
                 
                 $hasData = false;
                 echo '<table class="table">';
@@ -521,6 +557,28 @@
     
     <!-- Simple auto-refresh script -->
     <script>
+        // Toggle configuration section
+        function toggleConfig() {
+            const content = document.getElementById('config-content');
+            const icon = document.getElementById('toggle-icon');
+            
+            content.classList.toggle('collapsed');
+            icon.classList.toggle('collapsed');
+            
+            // Save state to localStorage
+            const isCollapsed = content.classList.contains('collapsed');
+            localStorage.setItem('configCollapsed', isCollapsed);
+        }
+        
+        // Restore collapsed state on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const isCollapsed = localStorage.getItem('configCollapsed') === 'true';
+            if (isCollapsed) {
+                document.getElementById('config-content').classList.add('collapsed');
+                document.getElementById('toggle-icon').classList.add('collapsed');
+            }
+        });
+        
         // Update status indicators on load using configured thresholds
         (function() {
             // Get thresholds from PHP
