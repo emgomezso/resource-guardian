@@ -376,7 +376,7 @@
         <div class="config-section">
             <h3 onclick="toggleConfig()">
                 <span>Configuration</span>
-                <span class="toggle-icon collapsed" id="toggle-icon">▼</span>
+                <span class="toggle-icon" id="toggle-icon">▼</span>
             </h3>
             <div class="config-content" id="config-content">
                 <?php echo $savedMessage; ?>
@@ -617,10 +617,10 @@
             updateStatusIndicator('cpu', cpuValue);
             updateStatusIndicator('ram', ramValue);
             
-            // Auto-refresh every 30 seconds
+            // Auto-refresh every 5 minutes
             setTimeout(function() {
                 location.reload();
-            }, 30000);
+            }, 300000);
         })();
     </script>
 </body>
