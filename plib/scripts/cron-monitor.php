@@ -258,95 +258,149 @@ function sendAlertEmail($db, $type, $severity, $message, $value, $threshold) {
     
     $to = trim($config['alert_email']);
     $hostname = gethostname();
-    
-    // Set email headers
-    $headers = "From: Resource Guardian <noreply@{$hostname}>\r\n";
-    $headers .= "Reply-To: noreply@{$hostname}\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
-    $headers .= "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $timestamp = date('Y-m-d H:i:s');
     
     // Email subject
     $subject = "[$severity] Resource Guardian Alert: $type on $hostname";
     
     // Email body (HTML)
     $body = "
-    <html>
-    <head>
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #f44336; color: white; padding: 15px; border-radius: 5px 5px 0 0; }
-            .header.warning { background: #ff9800; }
-            .content { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 5px 5px; }
-            .metric { background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #f44336; }
-            .metric.warning { border-left-color: #ff9800; }
-            .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
-            h1 { margin: 0; font-size: 20px; }
-            h2 { color: #333; font-size: 16px; }
-            .value { font-size: 24px; font-weight: bold; color: #f44336; }
-            .value.warning { color: #ff9800; }
-        </style>
-    </head>
-    <body>
-        <div class='container'>
-            <div class='header " . ($severity == 'warning' ? 'warning' : '') . "'>
-                <h1>🚨 Resource Guardian Alert</h1>
-            </div>
-            <div class='content'>
-                <h2>Alert Details</h2>
-                <div class='metric " . ($severity == 'warning' ? 'warning' : '') . "'>
-                    <strong>Server:</strong> {$hostname}<br>
-                    <strong>Resource:</strong> " . strtoupper($type) . "<br>
-                    <strong>Severity:</strong> " . strtoupper($severity) . "<br>
-                    <strong>Time:</strong> " . date('Y-m-d H:i:s') . "<br>
-                    <br>
-                    <div class='value " . ($severity == 'warning' ? 'warning' : '') . "'>{$value}%</div>
-                    <small>Threshold: {$threshold}%</small>
-                </div>
-                <p><strong>Message:</strong><br>{$message}</p>
-                <p>Please check your server's resource usage and take appropriate action if necessary.</p>
-            </div>
-            <div class='footer'>
-                <p>This is an automated alert from Resource Guardian monitoring system.<br>
-                Server: {$hostname} | Time: " . date('Y-m-d H:i:s') . "</p>
-            </div>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f44336; color: white; padding: 15px; border-radius: 5px 5px 0 0; }
+        .header.warning { background: #ff9800; }
+        .content { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 5px 5px; }
+        .metric { background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #f44336; }
+        .metric.warning { border-left-color: #ff9800; }
+        .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
+        h1 { margin: 0; font-size: 20px; }
+        h2 { color: #333; font-size: 16px; }
+        .value { font-size: 24px; font-weight: bold; color: #f44336; }
+        .value.warning { color: #ff9800; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header " . ($severity == 'warning' ? 'warning' : '') . "'>
+            <h1>Resource Guardian Alert</h1>
         </div>
-    </body>
-    </html>
-    ";
+        <div class='content'>
+            <h2>Alert Details</h2>
+            <div class='metric " . ($severity == 'warning' ? 'warning' : '') . "'>
+                <strong>Server:</strong> {$hostname}<br>
+                <strong>Resource:</strong> " . strtoupper($type) . "<br>
+                <strong>Severity:</strong> " . strtoupper($severity) . "<br>
+                <strong>Time:</strong> {$timestamp}<br>
+                <br>
+                <div class='value " . ($severity == 'warning' ? 'warning' : '') . "'>{$value}%</div>
+                <small>Threshold: {$threshold}%</small>
+            </div>
+            <p><strong>Message:</strong><br>{$message}</p>
+            <p>Please check your server's resource usage and take appropriate action if necessary.</p>
+        </div>
+        <div class='footer'>
+            <p>This is an automated alert from Resource Guardian monitoring system.<br>
+            Server: {$hostname} | Time: {$timestamp}</p>
+        </div>
+    </div>
+</body>
+</html>";
     
-    // Try to send email using PHP mail function
+    // Method 1: Try PHP mail() function first
+    $headers = "From: Resource Guardian <noreply@{$hostname}>\r\n";
+    $headers .= "Reply-To: noreply@{$hostname}\r\n";
+    $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+    
     $mailSent = @mail($to, $subject, $body, $headers);
     
     if ($mailSent) {
-        logMessage("Alert email sent successfully to: $to");
-    } else {
-        // If mail() fails, try using Plesk's mail system
-        logMessage("PHP mail() failed, trying Plesk mail system");
-        
-        // Create temporary file with email content
-        $tmpFile = tempnam(sys_get_temp_dir(), 'rg_email_');
-        file_put_contents($tmpFile, $body);
-        
-        // Try using sendmail directly
-        $sendmailCmd = "/usr/sbin/sendmail -t -i <<EOF
-To: {$to}
-From: Resource Guardian <noreply@{$hostname}>
-Subject: {$subject}
-Content-Type: text/html; charset=UTF-8
-
-{$body}
-EOF";
-        
-        exec($sendmailCmd, $output, $returnCode);
+        logMessage("Alert email sent successfully to: $to (via PHP mail)");
+        return;
+    }
+    
+    logMessage("PHP mail() failed, trying alternative methods");
+    
+    // Method 2: Try using sendmail with proper file input
+    $tmpFile = tempnam(sys_get_temp_dir(), 'rg_email_');
+    
+    $emailContent = "To: {$to}\r\n";
+    $emailContent .= "From: Resource Guardian <noreply@{$hostname}>\r\n";
+    $emailContent .= "Subject: {$subject}\r\n";
+    $emailContent .= "MIME-Version: 1.0\r\n";
+    $emailContent .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $emailContent .= "\r\n";
+    $emailContent .= $body;
+    
+    file_put_contents($tmpFile, $emailContent);
+    
+    // Try sendmail binary
+    $sendmailPaths = [
+        '/usr/sbin/sendmail',
+        '/usr/lib/sendmail',
+        '/usr/bin/sendmail'
+    ];
+    
+    $sendmailBinary = null;
+    foreach ($sendmailPaths as $path) {
+        if (file_exists($path) && is_executable($path)) {
+            $sendmailBinary = $path;
+            break;
+        }
+    }
+    
+    if ($sendmailBinary) {
+        $cmd = "{$sendmailBinary} -t -i -f noreply@{$hostname} < " . escapeshellarg($tmpFile);
+        exec($cmd . " 2>&1", $output, $returnCode);
         
         if ($returnCode === 0) {
             logMessage("Alert email sent via sendmail to: $to");
+            @unlink($tmpFile);
+            return;
         } else {
-            logMessage("Failed to send alert email to: $to (Return code: {$returnCode})");
+            logMessage("Sendmail failed (return code: {$returnCode}). Output: " . implode(", ", $output));
         }
-        
-        @unlink($tmpFile);
+    } else {
+        logMessage("Sendmail binary not found in common locations");
     }
+    
+    // Method 3: Try using Plesk's mail wrapper if available
+    $pleskMail = '/usr/sbin/plesk-mail';
+    if (file_exists($pleskMail) && is_executable($pleskMail)) {
+        $cmd = "{$pleskMail} -t -i < " . escapeshellarg($tmpFile);
+        exec($cmd . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            logMessage("Alert email sent via plesk-mail to: $to");
+            @unlink($tmpFile);
+            return;
+        } else {
+            logMessage("Plesk-mail failed (return code: {$returnCode}). Output: " . implode(", ", $output));
+        }
+    }
+    
+    // Method 4: Try using mail command (mailx)
+    if (file_exists('/usr/bin/mail')) {
+        // Create a plain text version for mail command
+        $plainText = strip_tags($body);
+        file_put_contents($tmpFile, $plainText);
+        
+        $cmd = "/usr/bin/mail -s " . escapeshellarg($subject) . " " . escapeshellarg($to) . " < " . escapeshellarg($tmpFile);
+        exec($cmd . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            logMessage("Alert email sent via mail command to: $to");
+            @unlink($tmpFile);
+            return;
+        } else {
+            logMessage("Mail command failed (return code: {$returnCode}). Output: " . implode(", ", $output));
+        }
+    }
+    
+    @unlink($tmpFile);
+    logMessage("ERROR: All email sending methods failed. Please check mail configuration.");
 }
